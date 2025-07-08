@@ -14,7 +14,7 @@
 ## Installation
 
 ```bash
-pip install clipar
+pip install git+https://github.com/plumiume/argparse-class-namespace.git
 ```
 
 ## Quick Start

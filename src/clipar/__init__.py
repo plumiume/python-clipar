@@ -1,2 +1,10 @@
-from .basewrapper import NotSelected
-from .decorator import namespace, group
+import sys
+
+if sys.version_info >= (3, 12):
+    from .v312.basewrapper import NotSelected
+    from .v312.decorator import namespace, group
+elif sys.version_info >= (3, 10):
+    from .v310.basewrapper import NotSelected
+    from .v310.decorator import namespace, group
+else:
+    raise ImportError("clipar requires Python 3.10 or later")
