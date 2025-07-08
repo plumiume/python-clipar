@@ -443,22 +443,22 @@ class BaseWrapper(Generic[_NS], abc.ABC):
     def _bind(self, name: str, parent: 'BaseWrapper') -> 'BoundWrapper':
         return BoundWrapper(name, parent, self)
 
-class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
+class SubparserWrapper(BaseWrapper[_NS], abc.ABC):
     def __init__(
         self,
-        namespace_type: type[NS]
+        namespace_type: type[_NS]
         ):
         super().__init__(namespace_type)
         self._container.set_defaults(_clipar_wrapper=self)
-        self._callback: Callable[[NS], object] | None = None
+        self._callback: Callable[[_NS], object] | None = None
 
     def _set_callback(
         self,
-        callback: Callable[[NS], object]
+        callback: Callable[[_NS], object]
         ):
         self._callback = callback
 
-    def _check_namespace(self, namespace: object) -> TypeGuard[NS]:
+    def _check_namespace(self, namespace: object) -> TypeGuard[_NS]:
         return all(
             hasattr(namespace, attr)
             for attr in self._arg_names
