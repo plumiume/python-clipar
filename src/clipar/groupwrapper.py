@@ -102,7 +102,10 @@ class GroupWrapper[NS](SubgroupWrapper[NS]):
         ):
 
         self._lazy_container = LazyContainer()
-        self._parser_options = parser_options
+        self._parser_options = GroupWrapperOptions(
+            title=namespace_type.__name__,
+            description=self.__doc__,
+        ) | parser_options
 
         super().__init__(namespace_type)
 
@@ -114,7 +117,6 @@ class GroupWrapper[NS](SubgroupWrapper[NS]):
         bound_name: list[str],
         bound_wrapper: BoundWrapper | None
         ):
-
         if bound_wrapper is None: # Never
             raise ValueError("bound_wrapper must not be None for GroupWrapper")
 

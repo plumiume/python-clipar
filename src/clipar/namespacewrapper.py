@@ -3,6 +3,7 @@ from typing import (
     Callable,
     TypedDict,
 )
+from itertools import chain 
 import argparse
 import argcomplete
 from .basewrapper import BaseWrapper, SubparserWrapper, BoundWrapper
@@ -104,6 +105,10 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                 new_names = bound_names + subgroup_names
                 subgroup_wrapper.self.on_before_parse(new_names, subgroup_wrapper)
 
+        flatten_subgroups = self._flatten_subgroups()
+        for subgroup_names, subgroup_wrapper in flatten_subgroups:
+            subgroup_wrapper.self.on_before_parse(subgroup_names, subgroup_wrapper)
+
         argcomplete.autocomplete(self._parser)
 
         return flatten_subparsers
@@ -163,7 +168,6 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             target_namespace = source_namespace
 
         for bound_name, bound_wrapper in subgroups.items():
-
             child_wrapper = bound_wrapper.self
             child_namespace = child_wrapper.namespace_type()
             setattr(target_namespace, bound_name, child_namespace)
@@ -178,10 +182,10 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             )
 
             for attr_name in child_wrapper._arg_names:
-
-                attr_value = getattr(source_namespace, attr_name)
-                delattr(source_namespace, attr_name)
-                setattr(child_namespace, attr_name, attr_value)
+                if hasattr(source_namespace, attr_name):
+                    attr_value = getattr(source_namespace, attr_name)
+                    delattr(source_namespace, attr_name)
+                    setattr(child_namespace, attr_name, attr_value)
 
             bound_wrapper.self.on_after_parse(new_names, bound_wrapper)
 
@@ -217,7 +221,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         ) -> NS:
 
         result_namespace = self.namespace_type()
-        for attr_name in self._arg_names:
+        for attr_name in chain(self._arg_names, self._subgroups):
             attr_value = getattr(current_namespace, attr_name)
             delattr(current_namespace, attr_name)
             setattr(result_namespace, attr_name, attr_value)
@@ -264,8 +268,8 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             
             # Parse specific arguments
             config = Config.parse_args(['data.txt', '--verbose'])
-            print(config.input_file)  # 'data.txt'
-            print(config.verbose)     # True
+            # config.input_file == 'data.txt'
+            # config.verbose == True
             ```
         """
         flatten_subparsers = self._before_parse()
@@ -307,9 +311,9 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             config, unknown = Config.parse_known_args([
                 'data.txt', '--verbose', '--unknown-flag', 'extra'
             ])
-            print(config.input_file)  # 'data.txt'
-            print(config.verbose)     # True
-            print(unknown)            # ['--unknown-flag', 'extra']
+            # config.input_file == 'data.txt'
+            # config.verbose == True
+            # unknown == ['--unknown-flag', 'extra']
             ```
         """
         flatten_subparsers = self._before_parse()
@@ -358,9 +362,9 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             config = Config.parse_intermixed_args([
                 'process', '--verbose', 'file1.txt', 'file2.txt'
             ])
-            print(config.command)  # 'process'
-            print(config.verbose)  # True
-            print(config.files)    # ['file1.txt', 'file2.txt']
+            # config.command == 'process'
+            # config.verbose == True
+            # config.files == ['file1.txt', 'file2.txt']
             ```
         """
         flatten_subparsers = self._before_parse()
@@ -403,9 +407,9 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             config, unknown = Config.parse_known_intermixed_args([
                 'process', '--verbose', '--unknown', 'value', 'extra'
             ])
-            print(config.command)  # 'process'
-            print(config.verbose)  # True
-            print(unknown)         # ['--unknown', 'value', 'extra']
+            # config.command == 'process'
+            # config.verbose == True
+            # unknown == ['--unknown', 'value', 'extra']
             ```
         """
         flatten_subparsers = self._before_parse()
@@ -444,12 +448,13 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             def post_process(config: Config.T):
                 # Delayed import is recommended: import inside the function if needed
                 if config.verbose:
-                    print(f"Verbose mode enabled. Input file: {config.input_file}")
+                    # Verbose mode enabled. Input file: config.input_file
+                    pass
                 return config
 
             config = Config.parse_args()
             # post_process will be called automatically after parsing
-            print(config)
+            # config is now available
             ```
         """
 

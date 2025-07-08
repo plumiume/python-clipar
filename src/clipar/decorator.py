@@ -100,8 +100,8 @@ class NamespaceWithOptions:
             
             # Parse command line arguments
             config = Config.parse_args(['--verbose', '--output', 'result.txt'])
-            print(config.verbose)  # True
-            print(config.output)   # 'result.txt'
+            # config.verbose == True
+            # config.output == 'result.txt'
             ```
 
             Creating a namespace with custom options:
@@ -179,7 +179,8 @@ class NamespaceWithOptions:
             try:
                 tool = RobustTool.parse_args(['--invalid'])
             except SystemExit as e:
-                print(f"Parsing failed: {e}")
+                # Parsing failed
+                pass
             ```
         """
 
@@ -276,8 +277,8 @@ class GroupWithOptions:
                 '--host', 'db.example.com',
                 '--username', 'admin'
             ])
-            print(config.database.host)  # 'db.example.com'
-            print(config.database.username)  # 'admin'
+            # config.database.host == 'db.example.com'
+            # config.database.username == 'admin'
             ```
 
             Using nested group classes within namespace:
@@ -394,8 +395,8 @@ class GroupWithOptions:
                 '--name', 'production_db',
                 '--level', 'DEBUG'
             ])
-            print(config.database.host)  # 'prod-db.example.com'
-            print(config.logging.level)  # 'DEBUG'
+            # config.database.host == 'prod-db.example.com'
+            # config.logging.level == 'DEBUG'
             ```
 
             Creating reusable group configurations:
@@ -479,8 +480,8 @@ class GroupWithOptions:
                 # If conflicts arise, 'resolve' strategy will handle them
             
             tool = Tool.parse_args(['--mode', 'manual', '--level', '3'])
-            print(tool.advanced.mode)  # 'manual'
-            print(tool.advanced.level)  # 3
+            # tool.advanced.mode == 'manual'
+            # tool.advanced.level == 3
             ```
 
             Chaining group options for inheritance:

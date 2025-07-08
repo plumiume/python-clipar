@@ -23,12 +23,14 @@ def _append_list[T](target: list[T], *args: T) -> list[T]:
     target.extend(args)
     return target
 
-class NotSelectedType: pass
+class _NotSelectedType:
+    def __bool__(self) -> Literal[False]:
+        return False
 
-class Not(Enum):
-    Selected = NotSelectedType()
+class NotSelectedType(Enum):
+    I = _NotSelectedType()
     "A singleton instance representing a value that is not selected or set."
-NotSelected: Final = Not.Selected
+NotSelected: Final = NotSelectedType.I
 
 class AddArgumentOptions(TypedDict, total=False):
     action: str | type[argparse.Action]
@@ -79,7 +81,7 @@ class BaseWrapper[NS](abc.ABC):
     @overload
     def __get__(
         self,
-        instance: type | None,
+        instance: 'WrapperHolder | type | None',
         owner: type | None = None
         ) -> Self:...
     @overload
@@ -87,20 +89,20 @@ class BaseWrapper[NS](abc.ABC):
         self,
         instance: object,
         owner: type | None = None
-        ) -> NS | Literal[Not.Selected]: ...
+        ) -> NS | Literal[NotSelectedType.I]: ...
     def __get__(
         self,
         instance: type | object | None,
         owner: type | None = None
         ):
 
-        if instance is None or isinstance(instance, type):
+        if instance is None or isinstance(instance, WrapperHolder | type):
             return self
 
         if _return_bool(False):
             return self.namespace_type()
         else:
-            return Not.Selected
+            return NotSelected
 
     @property
     def T(self) -> type[NS]:
@@ -138,6 +140,7 @@ class BaseWrapper[NS](abc.ABC):
                 )
 
             elif in_annotations and in_dict:
+                self._arg_names.add(assign_name)
                 self._add_opt(
                     container,
                     assign_name,
@@ -237,6 +240,7 @@ class BaseWrapper[NS](abc.ABC):
             action=action,
             help=doc,
             dest=name,
+            default=default,
             **parse_result,
         )
 
@@ -251,6 +255,8 @@ class BaseWrapper[NS](abc.ABC):
             and issubclass(annotation.__origin__, Sequence)
             ):
 
+            splited_annotation = annotation.__args__
+
             if issubclass(annotation.__origin__, tuple):
                 if ... in annotation.__args__:
                     nargs = '*'
@@ -261,12 +267,14 @@ class BaseWrapper[NS](abc.ABC):
                 nargs = '*'
 
         elif isinstance(annotation, UnionType):
+            splited_annotation = annotation.__args__
             nargs = '*'
 
         else:
+            splited_annotation = (annotation, )
             nargs = None
 
-        flatten_union_and_literal = self._flatten_union_and_literal(annotation)
+        flatten_union_and_literal = self._flatten_union_and_literal(splited_annotation)
 
         pick_choices_is_required = [
             all(
@@ -301,19 +309,20 @@ class BaseWrapper[NS](abc.ABC):
 
     def _flatten_union_and_literal(
         self,
-        annotation: UnionType | SupportsOriginAndArgs | type
+        annotations: tuple[UnionType | type | SupportsOriginAndArgs, ...]
         ) -> dict[
             type | SupportsOriginAndArgs,
             list[type | SupportsOriginAndArgs | Literalizable]
         ]:
 
-        union_args = (
-            annotation.__args__
-            if isinstance(annotation, UnionType)
-            else annotation.__args__
-            if isinstance(annotation, SupportsOriginAndArgs) and annotation.__origin__ is Union
-            else (annotation, )
-        )
+        union_args = list(chain.from_iterable(
+            ann.__args__
+            if isinstance(ann, UnionType)
+            else ann.__args__
+            if isinstance(ann, SupportsOriginAndArgs) and ann.__origin__ is Union
+            else (ann, )
+            for ann in annotations
+        ))
 
         literal_args = list(chain.from_iterable(
             ann.__args__
@@ -404,10 +413,15 @@ class BaseWrapper[NS](abc.ABC):
     def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper']]:
 
         return list(chain.from_iterable(
-            (
-                (_append_list(child_names, name), child_bound_wrapper)
-                for child_names, child_bound_wrapper
-                in bound_wrapper._parent._flatten_subgroups()
+            chain(
+                (
+                    ([name], bound_wrapper),
+                ),
+                (
+                    (_append_list(child_names, name), child_bound_wrapper)
+                    for child_names, child_bound_wrapper
+                    in bound_wrapper.self._flatten_subgroups()
+                )
             )
             for name, bound_wrapper in self._subgroups.items()
         ))
@@ -455,7 +469,9 @@ class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
 class SubgroupWrapper[NS](BaseWrapper[NS], abc.ABC):
     pass
 
-class BoundWrapper[W: BaseWrapper]:
+class WrapperHolder[W: BaseWrapper]: pass
+
+class BoundWrapper[W: BaseWrapper](WrapperHolder[W]):
 
     def __init__(self, name: str, parent_wrapper: BaseWrapper, self_wrapper: W):
         self._bound_name = name
