@@ -76,13 +76,14 @@ else:
         exit_on_error: bool
         "Whether to exit on error (default: True)"
 
-NS = TypeVar('NS')
+_NS = TypeVar('_NS')
+_R = TypeVar('_R')
 
-class NamespaceWrapper(SubparserWrapper[NS]):
+class NamespaceWrapper(SubparserWrapper[_NS]):
 
     def __init__(
         self,
-        namespace_type: Type[NS],
+        namespace_type: Type[_NS],
         parser_options: ArgumentParserOptions = {}
         ):
 
@@ -119,7 +120,7 @@ class NamespaceWrapper(SubparserWrapper[NS]):
         self,
         current_namespace: object,
         flatten_subparsers: list[tuple[list[str], BoundWrapper]],
-        ) -> NS:
+        ) -> _NS:
 
         leaf_wrapper: SubparserWrapper = self._parser.get_default('_clipar_wrapper')
 
@@ -220,7 +221,7 @@ class NamespaceWrapper(SubparserWrapper[NS]):
     def _set_current_namespace(
         self,
         current_namespace: object
-        ) -> NS:
+        ) -> _NS:
 
         result_namespace = self.namespace_type()
         for attr_name in chain(self._arg_names, self._subgroups):
@@ -231,7 +232,10 @@ class NamespaceWrapper(SubparserWrapper[NS]):
         return result_namespace
 
 
-    def parse_args(self, args: Union[list[str], None] = None) -> NS:
+    def parse_args(
+        self,
+        args: Union[list[str], None] = None
+        ) -> _NS:
         """
         Parse command-line arguments and return the configured namespace object.
         
@@ -278,7 +282,10 @@ class NamespaceWrapper(SubparserWrapper[NS]):
         namespace = self._parser.parse_args(args)
         return self._after_parse(namespace, flatten_subparsers)
 
-    def parse_known_args(self, args: Union[list[str], None] = None) -> tuple[NS, list[str]]:
+    def parse_known_args(
+        self,
+        args: Union[list[str], None] = None
+        ) -> tuple[_NS, list[str]]:
         """
         Parse known command-line arguments and return unrecognized arguments separately.
         
@@ -325,7 +332,10 @@ class NamespaceWrapper(SubparserWrapper[NS]):
             unknown_args
         )
 
-    def parse_intermixed_args(self, args: Union[list[str], None] = None) -> NS:
+    def parse_intermixed_args(
+        self,
+        args: Union[list[str], None] = None
+        ) -> _NS:
         """
         Parse arguments allowing positional and optional arguments to be intermixed.
         
@@ -374,7 +384,10 @@ class NamespaceWrapper(SubparserWrapper[NS]):
         return self._after_parse(namespace, flatten_subparsers)
 
 
-    def parse_known_intermixed_args(self, args: Union[list[str], None] = None) -> tuple[NS, list[str]]:
+    def parse_known_intermixed_args(
+        self,
+        args: Union[list[str], None] = None
+        ) -> tuple[_NS, list[str]]:
         """
         Parse known intermixed arguments and return unrecognized arguments separately.
         
@@ -420,13 +433,11 @@ class NamespaceWrapper(SubparserWrapper[NS]):
             self._after_parse(namespace, flatten_subparsers),
             unknown_args
         )
-
-    R = TypeVar('R')
     
     def callback(
         self,
-        func: Callable[[NS], R]
-        ) -> Callable[[NS], R]:
+        func: Callable[[_NS], _R]
+        ) -> Callable[[_NS], _R]:
         """
         Register a callback function to be executed after parsing the namespace.
 

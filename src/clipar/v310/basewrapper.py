@@ -23,7 +23,7 @@ _T = TypeVar('_T')
 def _return_bool(value: bool) -> bool:
     return value
 
-def _append_list[T](target: list[T], *args: T) -> list[T]:
+def _append_list(target: list[_T], *args: _T) -> list[_T]:
     target.extend(args)
     return target
 
@@ -71,9 +71,11 @@ class SupportsOriginAndArgs(Protocol):
     __origin__: 'type | SupportsOriginAndArgs'
     __args__: tuple
 
-class BaseWrapper[NS](abc.ABC):
+_NS = TypeVar('_NS')
 
-    def __init__(self, namespace_type: type[NS]):
+class BaseWrapper(Generic[_NS], abc.ABC):
+
+    def __init__(self, namespace_type: type[_NS]):
         self.namespace_type = namespace_type
         self._subparsers: dict[str, 'BoundWrapper'] = {}
         self._subgroups: dict[str, 'BoundWrapper'] = {}
@@ -93,7 +95,7 @@ class BaseWrapper[NS](abc.ABC):
         self,
         instance: object,
         owner: type | None = None
-        ) -> NS | Literal[NotSelectedType.I]: ...
+        ) -> _NS | Literal[NotSelectedType.I]: ...
     def __get__(
         self,
         instance: type | object | None,
@@ -109,7 +111,7 @@ class BaseWrapper[NS](abc.ABC):
             return NotSelected
 
     @property
-    def T(self) -> type[NS]:
+    def T(self) -> type[_NS]:
         "The type of the namespace class wrapped by this BaseWrapper."
         return self.namespace_type
 
@@ -125,7 +127,7 @@ class BaseWrapper[NS](abc.ABC):
     def _init_container(
         self,
         container: ArgumentContainerProtocol,
-        namespace_type: type[NS]
+        namespace_type: type[_NS]
         ):
 
         assign_infos = ClassAstHolder(namespace_type).get_assign_infos()

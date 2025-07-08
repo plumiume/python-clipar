@@ -1,9 +1,9 @@
-from typing import overload, Final, TypeVar, Type, Union, Any, cast
+from typing import overload, Final, TypeVar, Any, cast
 
 from .namespacewrapper import NamespaceWrapper, ArgumentParserOptions as NamespaceOptions
 from .groupwrapper import GroupWrapper, GroupWrapperOptions as GroupOptions
 
-NS = TypeVar('NS')
+_NS = TypeVar('_NS')
 
 class NamespaceWithOptions:
 
@@ -16,9 +16,9 @@ class NamespaceWithOptions:
     @overload
     def __call__(
         self,
-        namespace_type: Type[NS],
+        namespace_type: type[_NS],
         /
-        ) -> NamespaceWrapper[NS]: ...
+        ) -> NamespaceWrapper[_NS]: ...
     @overload
     def __call__(
         self,
@@ -28,7 +28,7 @@ class NamespaceWithOptions:
         ) -> 'NamespaceWithOptions': ...
     def __call__(
         self,
-        namespace_type: Union[Type[NS], None] = None,
+        namespace_type: type[_NS] | None = None,
         /,
         **options: Any
         ):
@@ -190,7 +190,7 @@ class NamespaceWithOptions:
             new_options = cast(NamespaceOptions, self.options | options)
             return NamespaceWithOptions(new_options)
 
-        return NamespaceWrapper[NS](namespace_type, cast(NamespaceOptions, options))
+        return NamespaceWrapper[_NS](namespace_type, cast(NamespaceOptions, options))
 
 class GroupWithOptions:
 
@@ -203,9 +203,9 @@ class GroupWithOptions:
     @overload
     def __call__(
         self,
-        namespace_type: Type[NS],
+        namespace_type: type[_NS],
         /
-        ) -> GroupWrapper[NS]: ...
+        ) -> GroupWrapper[_NS]: ...
     @overload
     def __call__(
         self,
@@ -215,7 +215,7 @@ class GroupWithOptions:
         ) -> 'GroupWithOptions': ...
     def __call__(
         self,
-        namespace_type: Union[Type[NS], None] = None,
+        namespace_type: type[_NS] | None = None,
         /,
         **options: Any
         ):
@@ -519,7 +519,7 @@ class GroupWithOptions:
             new_options = cast(GroupOptions, self.options | options)
             return GroupWithOptions(new_options)
 
-        return GroupWrapper[NS](namespace_type, cast(GroupOptions, options))
+        return GroupWrapper[_NS](namespace_type, cast(GroupOptions, options))
 
 namespace: Final = NamespaceWithOptions({}).__call__
 group: Final = GroupWithOptions({}).__call__
