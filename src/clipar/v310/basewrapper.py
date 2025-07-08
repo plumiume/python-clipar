@@ -472,14 +472,16 @@ class SubparserWrapper(BaseWrapper[_NS], abc.ABC):
         if self._check_namespace(namespace):
             return self._callback(namespace)
 
-class SubgroupWrapper[NS](BaseWrapper[NS], abc.ABC):
+class SubgroupWrapper(BaseWrapper[_NS], abc.ABC):
     pass
 
-class WrapperHolder[W: BaseWrapper]: pass
+_W = TypeVar('_W', bound=BaseWrapper)
 
-class BoundWrapper[W: BaseWrapper](WrapperHolder[W]):
+class WrapperHolder(Generic[_W]): pass
 
-    def __init__(self, name: str, parent_wrapper: BaseWrapper, self_wrapper: W):
+class BoundWrapper(WrapperHolder[_W]):
+
+    def __init__(self, name: str, parent_wrapper: BaseWrapper, self_wrapper: _W):
         self._bound_name = name
         self._parent = parent_wrapper
         self._self = self_wrapper
