@@ -1,8 +1,7 @@
 from typing import Self, Unpack, TypedDict
 import argparse
 
-from clipar.basewrapper import BoundWrapper
-from .basewrapper import AddArgumentOptions, ArgumentContainerProtocol, SubgroupWrapper
+from .basewrapper import BoundWrapper, AddArgumentOptions, ArgumentContainerProtocol, SubgroupWrapper
 
 class LazyContainer(ArgumentContainerProtocol):
 

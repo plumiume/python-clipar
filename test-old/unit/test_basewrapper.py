@@ -5,7 +5,7 @@ import argparse
 from typing import Literal
 from unittest.mock import Mock, MagicMock
 
-from clipar.basewrapper import (
+from clipar.v312.basewrapper import (
     BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper,
     NotSelected, NotSelectedType, _return_bool, _append_list,
     AddArgumentOptions, ArgumentContainerProtocol,

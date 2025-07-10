@@ -17,7 +17,7 @@ def test_imports():
 def test_notselected_import():
     """Test NotSelected import specifically"""
     from clipar import NotSelected
-    from clipar.basewrapper import NotSelected as BaseNotSelected
+    from clipar.v312.basewrapper import NotSelected as BaseNotSelected
     
     # Should be the same object
     assert NotSelected is BaseNotSelected
@@ -26,7 +26,7 @@ def test_notselected_import():
 def test_namespace_decorator_import():
     """Test namespace decorator import"""
     from clipar import namespace
-    from clipar.decorator import namespace as DecoratorNamespace
+    from clipar.v312.decorator import namespace as DecoratorNamespace
     
     # Should be the same function
     assert namespace is DecoratorNamespace
@@ -35,7 +35,7 @@ def test_namespace_decorator_import():
 def test_group_decorator_import():
     """Test group decorator import"""
     from clipar import group
-    from clipar.decorator import group as DecoratorGroup
+    from clipar.v312.decorator import group as DecoratorGroup
     
     # Should be the same function
     assert group is DecoratorGroup

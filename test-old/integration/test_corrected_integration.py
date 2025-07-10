@@ -311,7 +311,7 @@ class TestRealWorldUseCases:
     
     def test_web_server_config(self):
         """Test web server configuration scenario"""
-        from clipar import namespace, group
+        from clipar import namespace, group, NotSelected
         
         @group
         class ServerConfig:
@@ -339,15 +339,15 @@ class TestRealWorldUseCases:
         
         assert result.config_file == 'production.json'
         assert result.debug is True
-        assert hasattr(result, 'server')
-        assert hasattr(result, 'security')
+        assert result.server is not NotSelected
+        assert result.security is not NotSelected
         assert result.server.host == "0.0.0.0"
         assert result.server.port == 8000
         assert result.security.ssl_enabled is False
     
     def test_data_processing_pipeline(self):
         """Test data processing pipeline configuration"""
-        from clipar import namespace, group
+        from clipar import namespace, group, NotSelected
         
         @group
         class InputConfig:
@@ -381,9 +381,9 @@ class TestRealWorldUseCases:
         assert result.output_file == 'processed_data.json'
         assert result.batch_size == 5000
         assert result.parallel_workers == 4
-        assert hasattr(result, 'input_config')
-        assert hasattr(result, 'output_config')
+        assert result.input_config is not NotSelected
         assert result.input_config.input_format == "csv"
+        assert result.output_config is not NotSelected
         assert result.output_config.pretty_print is True
 
 
@@ -444,3 +444,73 @@ class TestHelpMessageSupport:
             # Should at least show the main namespace help
             assert 'Application name' in help_text
             # Group arguments might not appear in main help but functionality works
+
+class TestNestedNamespace:
+    """Test nested namespaces and groups"""
+    
+    def test_nested_namespace(self):
+        """Test nested namespaces with groups"""
+        from clipar import namespace, group, NotSelected
+        
+        @group
+        class DatabaseConfig:
+            host: str = "localhost"
+            port: int = 5432
+        
+        @namespace
+        class AppConfig:
+            app_name: str = "MyApp"
+            debug: bool = False
+            database = DatabaseConfig
+        
+        @namespace
+        class MainConfig:
+            config = AppConfig
+        
+        # Test basic parsing
+        result = MainConfig.parse_args([
+            'config',
+            '--app-name', 'TestApp',
+            '--debug',
+        ])
+            
+        assert result.config is not NotSelected
+        assert result.config.app_name == 'TestApp'
+        assert result.config.debug is True
+        assert result.config.database is not NotSelected
+        assert result.config.database.host == "localhost"
+        assert result.config.database.port == 5432
+
+    def test_nested_group_integration(self):
+        """Test nested groups within namespaces"""
+        from clipar import namespace, group, NotSelected
+        
+        @group
+        class ServerConfig:
+            host: str = "localhost"
+            port: int = 5432
+        @group
+        class SecurityConfig:
+            ssl_enabled: bool = False
+            ssl_cert: str = ""
+            ssl_key: str = ""
+        @namespace
+        class WebServerConfig:
+            app_name: str = "MyWebApp"
+            debug: bool = False
+            server = ServerConfig
+            security = SecurityConfig
+        # Test basic parsing
+        result = WebServerConfig.parse_args([
+            '--app-name', 'TestWebApp',
+            '--debug',
+            '--host', 'localhost',
+            '--port', '8080',
+            '--ssl-enabled'
+        ])
+        assert result is not None
+        # Check that the nested groups are accessible
+        assert result.server is not NotSelected
+        assert result.security is not NotSelected
+        assert result.server.host == "localhost"
+        assert result.security.ssl_enabled is True

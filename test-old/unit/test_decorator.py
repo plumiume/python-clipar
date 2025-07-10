@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import Mock, patch
 from typing import Any
 
-from clipar.decorator import NamespaceWithOptions, namespace, group
+from clipar.v312.decorator import NamespaceWithOptions, namespace, group
 
 
 class MockNamespace:
@@ -29,7 +29,7 @@ class TestNamespaceWithOptions:
         options: Any = {"prog": "test_prog"}
         nwo = NamespaceWithOptions(options)
         
-        with patch('clipar.decorator.NamespaceWrapper') as mock_wrapper_class:
+        with patch('clipar.v312.decorator.NamespaceWrapper') as mock_wrapper_class:
             # NamespaceWrapper[NS] calls __getitem__ then the result
             mock_instance = Mock()
             mock_wrapper_class.__getitem__.return_value = mock_instance
@@ -71,7 +71,7 @@ class TestNamespaceDecorator:
     
     def test_namespace_call_with_type(self):
         """Test namespace decorator with type"""
-        with patch('clipar.decorator.NamespaceWrapper') as mock_wrapper_class:
+        with patch('clipar.v312.decorator.NamespaceWrapper') as mock_wrapper_class:
             # NamespaceWrapper[NS] calls __getitem__ then the result
             mock_instance = Mock()
             mock_wrapper_class.__getitem__.return_value = mock_instance
@@ -101,7 +101,7 @@ class TestNamespaceDecorator:
     
     def test_namespace_as_decorator(self):
         """Test namespace used as decorator"""
-        with patch('clipar.decorator.NamespaceWrapper') as mock_wrapper_class:
+        with patch('clipar.v312.decorator.NamespaceWrapper') as mock_wrapper_class:
             # NamespaceWrapper[NS] calls __getitem__ then the result
             mock_instance = Mock()
             mock_wrapper_class.__getitem__.return_value = mock_instance
@@ -119,7 +119,7 @@ class TestNamespaceDecorator:
     
     def test_namespace_as_decorator_with_options(self):
         """Test namespace used as decorator with options"""
-        with patch('clipar.decorator.NamespaceWrapper') as mock_wrapper_class:
+        with patch('clipar.v312.decorator.NamespaceWrapper') as mock_wrapper_class:
             # NamespaceWrapper[NS] calls __getitem__ then the result
             mock_instance = Mock()
             mock_wrapper_class.__getitem__.return_value = mock_instance
@@ -156,7 +156,7 @@ class TestGroupDecorator:
     
     def test_group_call_with_type(self):
         """Test group decorator with type"""
-        with patch('clipar.decorator.GroupWrapper') as mock_wrapper_class:
+        with patch('clipar.v312.decorator.GroupWrapper') as mock_wrapper_class:
             # GroupWrapper[NS] calls __getitem__ then the result
             mock_instance = Mock()
             mock_wrapper_class.__getitem__.return_value = mock_instance
@@ -172,8 +172,8 @@ class TestGroupDecorator:
     def test_group_call_with_options(self):
         """Test group decorator with options"""
         options = {"title": "Test Group", "description": "Test description"}
-        
-        with patch('clipar.decorator.GroupWithOptions') as mock_group_options:
+
+        with patch('clipar.v312.decorator.GroupWithOptions') as mock_group_options:
             mock_instance = Mock()
             mock_group_options.return_value = mock_instance
             
@@ -184,7 +184,7 @@ class TestGroupDecorator:
     
     def test_group_call_without_args(self):
         """Test group decorator without arguments"""
-        with patch('clipar.decorator.GroupWithOptions') as mock_group_options:
+        with patch('clipar.v312.decorator.GroupWithOptions') as mock_group_options:
             mock_instance = Mock()
             mock_group_options.return_value = mock_instance
             
@@ -195,7 +195,7 @@ class TestGroupDecorator:
     
     def test_group_as_decorator(self):
         """Test group used as decorator"""
-        with patch('clipar.decorator.GroupWrapper') as mock_wrapper_class:
+        with patch('clipar.v312.decorator.GroupWrapper') as mock_wrapper_class:
             # GroupWrapper[NS] calls __getitem__ then the result
             mock_instance = Mock()
             mock_wrapper_class.__getitem__.return_value = mock_instance
@@ -213,7 +213,7 @@ class TestGroupDecorator:
     
     def test_group_as_decorator_with_options(self):
         """Test group used as decorator with options"""
-        with patch('clipar.decorator.GroupWrapper') as mock_wrapper_class:
+        with patch('clipar.v312.decorator.GroupWrapper') as mock_wrapper_class:
             # GroupWrapper[NS] calls __getitem__ then the result
             mock_instance = Mock()
             mock_wrapper_class.__getitem__.return_value = mock_instance
@@ -257,8 +257,8 @@ class TestDecoratorIntegration:
             "title": "Test Group",
             "description": "Test description"
         }
-        
-        with patch('clipar.decorator.GroupWithOptions') as mock_group_options:
+
+        with patch('clipar.v312.decorator.GroupWithOptions') as mock_group_options:
             mock_instance = Mock()
             mock_group_options.return_value = mock_instance
             

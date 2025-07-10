@@ -43,6 +43,12 @@ class ClassAstHolder[CLS]:
         code = self._get_class_code(cls)
         tree = self._get_ast_tree(code)
         self.classdef = self._get_classdef_from_tree(tree)
+
+
+    def _get_classdef_name(self, node: ast.AST) -> str | None:
+        if isinstance(node, ast.ClassDef):
+            return node.name
+        return None
  
     def _get_annassign_target_name(self, node: ast.AST) -> str | None:
 
@@ -76,11 +82,14 @@ class ClassAstHolder[CLS]:
             if (name := self._get_target_name(assign)) is not None
         }
 
-    def get_assign_orders(self) -> dict[str, int]:
+    def get_orders(self) -> dict[str, int]:
 
         return {
-            name: idx for idx, assign in enumerate(self.classdef.body)
-            if (name := self._get_target_name(assign)) is not None
+            name: idx for idx, node in enumerate(self.classdef.body)
+            if (
+                (name := self._get_target_name(node)) is not None
+                or (name := self._get_classdef_name(node)) is not None
+            )
         }
 
     class _VarInfo(NamedTuple):
@@ -89,11 +98,11 @@ class ClassAstHolder[CLS]:
 
     def get_assign_infos(self) -> dict[str, _VarInfo]:
         assign_docs = self.get_assign_docs()
-        assign_orders = self.get_assign_orders()
+        orders = self.get_orders()
         return {
             name: self._VarInfo(
                 doc=assign_docs.get(name, None),
-                order=assign_orders[name]
+                order=orders[name]
             )
-            for name in assign_orders
+            for name in orders
         }

@@ -5,7 +5,7 @@ import argparse
 from unittest.mock import Mock, patch
 from typing import Any
 
-from clipar.groupwrapper import LazyContainer, GroupWrapper, GroupWrapperOptions
+from clipar.v312.groupwrapper import LazyContainer, GroupWrapper, GroupWrapperOptions
 
 
 class MockNamespace:
@@ -241,7 +241,7 @@ class TestGroupWrapper:
         parent_wrapper = Mock()
         
         # GroupWrapper uses the base _bind method from BaseWrapper
-        from clipar.basewrapper import BoundWrapper
+        from clipar.v312.basewrapper import BoundWrapper
         result = wrapper._bind("test_name", parent_wrapper)
         
         assert isinstance(result, BoundWrapper)
@@ -278,7 +278,7 @@ class TestBoundGroupWrapper:
     
     def test_bound_wrapper_with_group(self):
         """Test that BoundWrapper works with GroupWrapper"""
-        from clipar.basewrapper import BoundWrapper
+        from clipar.v312.basewrapper import BoundWrapper
         
         wrapper = GroupWrapper(MockNamespace)
         parent_wrapper = Mock()

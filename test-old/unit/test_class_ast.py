@@ -5,7 +5,7 @@ import ast
 import textwrap
 from unittest.mock import Mock, patch
 
-from clipar.class_ast import ClassAstHolder
+from clipar.v312.class_ast import ClassAstHolder
 
 
 class MockClass:
@@ -213,7 +213,7 @@ class TestClassAstHolder:
         
         with patch.object(ClassAstHolder, '_get_class_code', return_value=code):
             holder = ClassAstHolder(MockClass)
-            orders = holder.get_assign_orders()
+            orders = holder.get_orders()
             
             assert "arg1" in orders
             assert "arg2" in orders

@@ -30,6 +30,8 @@ class _NotSelectedType:
 class NotSelectedType(Enum):
     I = _NotSelectedType()
     "A singleton instance representing a value that is not selected or set."
+    def __repr__(self) -> str:
+        return "NotSelected"
 NotSelected: Final = NotSelectedType.I
 
 class AddArgumentOptions(TypedDict, total=False):
@@ -192,7 +194,7 @@ class BaseWrapper[NS](abc.ABC):
                 f"got {type(wrapper).__name__}."
             )
 
-        self.on_after_bind(bound_wrapper)
+        wrapper.on_after_bind(bound_wrapper)
 
     class _ParseAnnotationResult(TypedDict, total=False):
         nargs: int | Literal['?', '*', '+'] | None
@@ -402,10 +404,15 @@ class BaseWrapper[NS](abc.ABC):
     def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper']]:
 
         return list(chain.from_iterable(
-            (
-                (_append_list(child_names, name), child_bound_wrapper)
-                for child_names, child_bound_wrapper
-                in bound_wrapper._parent._flatten_subparsers()
+            chain(
+                (
+                    ([name], bound_wrapper),
+                ),
+                (
+                    (_append_list(child_names, name), child_bound_wrapper)
+                    for child_names, child_bound_wrapper
+                    in bound_wrapper.self._flatten_subparsers()
+                )
             )
             for name, bound_wrapper in self._subparsers.items()
         ))

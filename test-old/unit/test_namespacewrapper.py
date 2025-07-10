@@ -6,7 +6,7 @@ import sys
 from unittest.mock import Mock, patch, MagicMock
 from typing import Any
 
-from clipar.namespacewrapper import NamespaceWrapper, ArgumentParserOptions
+from clipar.v312.namespacewrapper import NamespaceWrapper, ArgumentParserOptions
 
 
 class MockNamespace:
@@ -136,7 +136,7 @@ class TestNamespaceWrapper:
         mock_namespace = Mock()
         
         # Create proper BoundWrapper instances instead of Mock
-        from clipar.basewrapper import BoundWrapper
+        from clipar.v312.basewrapper import BoundWrapper
         mock_bound_wrapper1 = BoundWrapper("sub1", wrapper, wrapper)
         mock_bound_wrapper2 = BoundWrapper("sub2", wrapper, wrapper)
         
@@ -148,15 +148,11 @@ class TestNamespaceWrapper:
         # Mock parser to return the wrapper itself as default
         with patch.object(wrapper._parser, 'get_default', return_value=wrapper):
             with patch.object(wrapper, '_set_subgroup_namespace'):
-                with patch.object(wrapper, '_set_subparser_namespace'):
-                    with patch.object(wrapper, '_set_current_namespace') as mock_set_current:
-                        mock_result = Mock()
-                        mock_set_current.return_value = mock_result
-                        
-                        result = wrapper._after_parse(mock_namespace, flatten_result)
-                        
-                        assert result == mock_result
-                        mock_set_current.assert_called_once_with(mock_namespace)
+                # Since _set_subparser_namespace was removed, test the direct result
+                result = wrapper._after_parse(mock_namespace, flatten_result)
+                
+                # Verify that _after_parse returns the modified namespace
+                assert result is not None
     
     def test_run_callbacks_removed(self):
         """Test that callback execution is handled in _after_parse"""

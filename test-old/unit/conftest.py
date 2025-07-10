@@ -13,11 +13,11 @@ if str(src_path) not in sys.path:
 def test_all_modules():
     """Test that all main modules can be imported"""
     try:
-        import clipar.basewrapper
-        import clipar.class_ast
-        import clipar.decorator
-        import clipar.namespacewrapper
-        import clipar.groupwrapper
+        import clipar.v312.basewrapper
+        import clipar.v312.class_ast
+        import clipar.v312.decorator
+        import clipar.v312.namespacewrapper
+        import clipar.v312.groupwrapper
         assert True
     except ImportError as e:
         pytest.fail(f"Failed to import modules: {e}")
