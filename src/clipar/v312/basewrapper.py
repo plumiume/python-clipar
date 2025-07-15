@@ -26,7 +26,7 @@ def _append_list[T](target: list[T], *args: T) -> list[T]:
 class _NotSelectedType:
     def __bool__(self) -> Literal[False]:
         return False
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> 'Literal[NotSelectedType.I]':
         return NotSelectedType.I
 
 class NotSelectedType(Enum):
@@ -36,7 +36,7 @@ class NotSelectedType(Enum):
         return "NotSelected"
     def __bool__(self) -> Literal[False]:
         return False
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> 'Literal[NotSelectedType.I]':
         return NotSelectedType.I
 NotSelected: Final = NotSelectedType.I
 
