@@ -27,7 +27,10 @@ class _NotSelectedType:
     def __bool__(self) -> Literal[False]:
         return False
     def __getattr__(self, name: str) -> 'Literal[NotSelectedType.I]':
-        return NotSelectedType.I
+        try:
+            return NotSelectedType.I
+        except NameError as e:
+            raise AttributeError() from e
 
 class NotSelectedType(Enum):
     I = _NotSelectedType()
@@ -37,7 +40,10 @@ class NotSelectedType(Enum):
     def __bool__(self) -> Literal[False]:
         return False
     def __getattr__(self, name: str) -> 'Literal[NotSelectedType.I]':
-        return NotSelectedType.I
+        try:
+            return NotSelectedType.I
+        except NameError as e:
+            raise AttributeError() from e
 NotSelected: Final = NotSelectedType.I
 
 class AddArgumentOptions(TypedDict, total=False):
