@@ -31,6 +31,8 @@ def _append_list(target: list[_T], *args: _T) -> list[_T]:
 class _NotSelectedType:
     def __bool__(self) -> Literal[False]:
         return False
+    def __getattr__(self, name: str):
+        return NotSelectedType.I
 
 class NotSelectedType(Enum):
     I = _NotSelectedType()
@@ -39,6 +41,8 @@ class NotSelectedType(Enum):
         return "NotSelected"
     def __bool__(self) -> Literal[False]:
         return False
+    def __getattr__(self, name: str):
+        return NotSelectedType.I
 NotSelected: Final = NotSelectedType.I
 
 class AddArgumentOptions(TypedDict, total=False):
