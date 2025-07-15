@@ -11,7 +11,9 @@ class ClassAstHolder[CLS]:
         try:
             code = inspect.getsource(cls)
         except OSError as e:
-            raise RuntimeError(f"Could not retrieve source code for class {cls.__name__}: {e}")
+            raise OSError(f"Could not retrieve source code for class {cls.__name__}: {e}")
+        except TypeError as e:
+            raise TypeError(f"Could not retrieve source code for class {cls.__name__}: {e}")
         except Exception as e:
             raise RuntimeError(f"Unexpected error while retrieving source code for class {cls.__name__}: {e}")
 

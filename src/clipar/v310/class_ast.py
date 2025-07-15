@@ -1,19 +1,21 @@
-from typing import Generic, NamedTuple, Type, Union, TypeVar
+from typing import NamedTuple, TypeVar, Generic
 import itertools
 import inspect
 import textwrap
 import ast
 
-CLS = TypeVar('CLS')
+_CLS = TypeVar('_CLS')
 
-class ClassAstHolder(Generic[CLS]):
+class ClassAstHolder(Generic[_CLS]):
 
     def _get_class_code(self, cls: type) -> str:
 
         try:
             code = inspect.getsource(cls)
         except OSError as e:
-            raise RuntimeError(f"Could not retrieve source code for class {cls.__name__}: {e}")
+            raise OSError(f"Could not retrieve source code for class {cls.__name__}: {e}")
+        except TypeError as e:
+            raise TypeError(f"Could not retrieve source code for class {cls.__name__}: {e}")
         except Exception as e:
             raise RuntimeError(f"Unexpected error while retrieving source code for class {cls.__name__}: {e}")
 
@@ -40,37 +42,43 @@ class ClassAstHolder(Generic[CLS]):
 
         return target
 
-    def __init__(self, cls: Type[CLS]):
+    def __init__(self, cls: type[_CLS]):
         self.cls = cls
         code = self._get_class_code(cls)
         tree = self._get_ast_tree(code)
         self.classdef = self._get_classdef_from_tree(tree)
+
+
+    def _get_classdef_name(self, node: ast.AST) -> str | None:
+        if isinstance(node, ast.ClassDef):
+            return node.name
+        return None
  
-    def _get_annassign_target_name(self, node: ast.AST) -> Union[str, None]:
+    def _get_annassign_target_name(self, node: ast.AST) -> str | None:
 
         if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             return node.target.id
         return None
 
-    def _get_assign_target_name(self, node: ast.AST) -> Union[str, None]:
+    def _get_assign_target_name(self, node: ast.AST) -> str | None:
 
         if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
             return node.targets[0].id
         return None
 
-    def _get_target_name(self, node: ast.AST) -> Union[str, None]:
+    def _get_target_name(self, node: ast.AST) -> str | None:
         return (
             self._get_annassign_target_name(node)
             or self._get_assign_target_name(node)
         )
 
-    def _get_str_constant_expr(self, node: ast.AST) -> Union[str, None]:
+    def _get_str_constant_expr(self, node: ast.AST) -> str | None:
 
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
             return node.value.value
         return None
 
-    def get_assign_docs(self) -> dict[str, Union[str, None]]:
+    def get_assign_docs(self) -> dict[str, str | None]:
 
         return {
             name: self._get_str_constant_expr(expr)
@@ -78,24 +86,27 @@ class ClassAstHolder(Generic[CLS]):
             if (name := self._get_target_name(assign)) is not None
         }
 
-    def get_assign_orders(self) -> dict[str, int]:
+    def get_orders(self) -> dict[str, int]:
 
         return {
-            name: idx for idx, assign in enumerate(self.classdef.body)
-            if (name := self._get_target_name(assign)) is not None
+            name: idx for idx, node in enumerate(self.classdef.body)
+            if (
+                (name := self._get_target_name(node)) is not None
+                or (name := self._get_classdef_name(node)) is not None
+            )
         }
 
     class _VarInfo(NamedTuple):
-        doc: Union[str, None]
+        doc: str | None
         order: int
 
     def get_assign_infos(self) -> dict[str, _VarInfo]:
         assign_docs = self.get_assign_docs()
-        assign_orders = self.get_assign_orders()
+        orders = self.get_orders()
         return {
             name: self._VarInfo(
                 doc=assign_docs.get(name, None),
-                order=assign_orders[name]
+                order=orders[name]
             )
-            for name in assign_orders
+            for name in orders
         }

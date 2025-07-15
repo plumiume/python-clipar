@@ -1,13 +1,13 @@
 import abc
 from typing import (
-    overload, Protocol, runtime_checkable, Any,
+    overload, Self, Protocol, runtime_checkable, Any,
     Callable, Literal, Union,
     Iterable, Sequence,
-    TypedDict, Unpack,
+    TypedDict,
     TypeGuard, Final,
     TypeVar, Generic
 )
-from typing_extensions import Self
+from typing_extensions import Unpack
 from types import UnionType
 from enum import Enum
 
@@ -19,6 +19,7 @@ from .class_ast import ClassAstHolder
 Literalizable = str | int | float | bool | None
 
 _T = TypeVar('_T')
+_NS = TypeVar('_NS')
 
 def _return_bool(value: bool) -> bool:
     return value
@@ -34,6 +35,10 @@ class _NotSelectedType:
 class NotSelectedType(Enum):
     I = _NotSelectedType()
     "A singleton instance representing a value that is not selected or set."
+    def __repr__(self) -> str:
+        return "NotSelected"
+    def __bool__(self) -> Literal[False]:
+        return False
 NotSelected: Final = NotSelectedType.I
 
 class AddArgumentOptions(TypedDict, total=False):
@@ -49,6 +54,7 @@ class AddArgumentOptions(TypedDict, total=False):
     dest: str | None
     version: str
 
+@runtime_checkable
 class ArgumentContainerProtocol(Protocol):
     def add_argument(
         self,
@@ -61,8 +67,13 @@ class ArgumentContainerProtocol(Protocol):
         description: str | None = None,
         *,
         prefix_chars: str = '-',
-        conflict_handler: str = 'error',
-        ) -> Any: ...
+        conflict_handler: str = 'error'
+        ) -> 'ArgumentContainerProtocol':...
+    def add_mutually_exclusive_group(
+        self,
+        *,
+        required: bool = False
+        ) -> 'ArgumentContainerProtocol':...
     def set_defaults(self, **kwargs):...
     def get_default(self, dest: str) -> object:...
 
@@ -70,8 +81,6 @@ class ArgumentContainerProtocol(Protocol):
 class SupportsOriginAndArgs(Protocol):
     __origin__: 'type | SupportsOriginAndArgs'
     __args__: tuple
-
-_NS = TypeVar('_NS')
 
 class BaseWrapper(Generic[_NS], abc.ABC):
 
@@ -138,7 +147,13 @@ class BaseWrapper(Generic[_NS], abc.ABC):
             in_dict = assign_name in namespace_type.__dict__
             default = namespace_type.__dict__.get(assign_name, None)
 
-            if in_dict and isinstance(default, SubparserWrapper | SubgroupWrapper):
+            if isinstance(default, type):
+                raise TypeError(
+                    f"Assign name '{assign_name}' cannot be a type, "
+                    f"it must be an instance or a default value."
+                )
+
+            elif in_dict and isinstance(default, SubparserWrapper | SubgroupWrapper):
                 self._add_wrapper(
                     container,
                     assign_name,
@@ -181,10 +196,12 @@ class BaseWrapper(Generic[_NS], abc.ABC):
 
     def _add_wrapper(
         self,
-        container: ArgumentContainerProtocol,
+        container: ArgumentContainerProtocol, # for compatibility, not used
         name: str,
         wrapper: 'SubparserWrapper | SubgroupWrapper'
         ):
+
+        wrapper.on_before_bind(name, self)
 
         bound_wrapper = wrapper._bind(name, self)
 
@@ -198,7 +215,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
                 f"got {type(wrapper).__name__}."
             )
 
-        self.on_after_bind(bound_wrapper)
+        wrapper.on_after_bind(name, self)
 
     class _ParseAnnotationResult(TypedDict, total=False):
         nargs: int | Literal['?', '*', '+'] | None
@@ -408,10 +425,15 @@ class BaseWrapper(Generic[_NS], abc.ABC):
     def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper']]:
 
         return list(chain.from_iterable(
-            (
-                (_append_list(child_names, name), child_bound_wrapper)
-                for child_names, child_bound_wrapper
-                in bound_wrapper._parent._flatten_subparsers()
+            chain(
+                (
+                    ([name], bound_wrapper),
+                ),
+                (
+                    (_append_list(child_names, name), child_bound_wrapper)
+                    for child_names, child_bound_wrapper
+                    in bound_wrapper.self._flatten_subparsers()
+                )
             )
             for name, bound_wrapper in self._subparsers.items()
         ))
@@ -432,10 +454,12 @@ class BaseWrapper(Generic[_NS], abc.ABC):
             for name, bound_wrapper in self._subgroups.items()
         ))
 
-    def on_after_bind(self, bound_wrapper: 'BoundWrapper'):
+    def on_before_bind(self, bound_name: str, wrapper: 'BaseWrapper'):
+        pass
+    def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper'):
         pass
 
-    def on_before_parse(self, bound_name: list[str], bound_wrapper: 'BoundWrapper | None'):
+    def on_before_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper | None'):
         pass
     def on_after_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper | None'):
         pass

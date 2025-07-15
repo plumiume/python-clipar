@@ -1,12 +1,13 @@
 import sys
 from typing import (
+    Iterable,
     Callable,
     TypedDict,
 )
 from itertools import chain 
 import argparse
 import argcomplete
-from .basewrapper import BaseWrapper, SubparserWrapper, BoundWrapper
+from .basewrapper import BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper
 
 if sys.version_info >= (3, 14):
     class ArgumentParserOptions(TypedDict, total=False):
@@ -83,8 +84,6 @@ class SubParserOptions(TypedDict, total=False):
     "The name to use for the subcommand in help output (default: None)"
     required: bool
     "Whether the subcommand is required (default: False)"
-    dest: str | None
-    "The attribute name to use for the selected subcommand in the namespace (default: '_clipar_subcommand')"
 
 class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
@@ -103,6 +102,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
     def _get_subparsers(self) -> argparse._SubParsersAction:
         if self._parser_subparsers is None:
             self._parser_subparsers = self._parser.add_subparsers(
+                dest='_clipar_leaf_name',
                 **self._subparser_options,
             )
         return self._parser_subparsers
@@ -110,12 +110,14 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
     def configure_container(self) -> argparse.ArgumentParser:
         return self._parser
 
-    def on_after_bind(self, bound_wrapper: BoundWrapper):
-        parent = bound_wrapper._parent
-        child = bound_wrapper.self
-        if isinstance(parent, NamespaceWrapper):
-            parent._get_subparsers().add_parser(
-                bound_wrapper._bound_name,
+    def on_after_bind(self, bound_name: str, wrapper: BaseWrapper):
+        if isinstance(wrapper, SubgroupWrapper):
+            raise TypeError(
+                f"SubgroupWrapper {wrapper} cannot be bound to a NamespaceWrapper."
+            )
+        if isinstance(wrapper, NamespaceWrapper):
+            wrapper._get_subparsers().add_parser(
+                bound_name,
                 parents=[self._parser],
                 add_help=False,
             )
@@ -132,7 +134,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             flatten_subgroups = bound_wrapper.self._flatten_subgroups()
 
             for subgroup_names, subgroup_wrapper in flatten_subgroups:
-                new_names = bound_names + subgroup_names
+                new_names = subgroup_names + bound_names
                 subgroup_wrapper.self.on_before_parse(new_names, subgroup_wrapper)
 
         flatten_subgroups = self._flatten_subgroups()
@@ -150,39 +152,44 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         ) -> NS:
 
         leaf_wrapper: SubparserWrapper = getattr(argparse_namespace, '_clipar_wrapper')
+        leaf_name: str | None = getattr(argparse_namespace, '_clipar_leaf_name', None)
 
-        if leaf_wrapper is self:
-            bound_names = []
-            wrapper = self
+        bound_names = []
 
-        else:
-            bound = None
-            for bound in flatten_subparsers:
-                if bound[1]._self is leaf_wrapper:
+        if self is not leaf_wrapper:
+            
+            for bound_names, bound_wrapper in flatten_subparsers:
+                if (
+                    bound_names
+                    and bound_names[0] == leaf_name
+                    and bound_wrapper._self is leaf_wrapper
+                    ):
                     break
 
-            if bound is None:
+            if not bound_names:
                 raise ValueError(
                     f"Leaf wrapper not found in the flattened subparsers."
                     f" ( flatten_subparsers: {flatten_subparsers} )"
                 )
 
-            bound_names = bound[0]
-            wrapper = bound[1].self
+        leaf_namespace = leaf_wrapper.namespace_type()
 
         self._set_subgroup_namespace(
-            wrapper._subgroups,
+            leaf_wrapper._subgroups,
             argparse_namespace,
+            leaf_namespace,
             bound_names,
         )
 
-        leaf_namespace = leaf_wrapper.namespace_type()
-        for attr_name in chain(wrapper._arg_names, wrapper._subgroups):
-            attr_value = getattr(argparse_namespace, attr_name)
-            setattr(leaf_namespace, attr_name, attr_value)
+        self._set_args(
+            leaf_wrapper,
+            argparse_namespace,
+            leaf_namespace,
+        )
 
         result_namespace = self._set_subparser_namespace(
             flatten_subparsers,
+            argparse_namespace,
             leaf_namespace,
             bound_names,
         )
@@ -191,16 +198,24 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
         return result_namespace
 
+    def _set_args(
+        self,
+        wrapper: BaseWrapper,
+        argparse_namespace: argparse.Namespace,
+        target_namespace: object,
+        ):
+
+        for attr_name in wrapper._arg_names:
+            attr_value = getattr(argparse_namespace, attr_name)
+            setattr(target_namespace, attr_name, attr_value)
+
     def _set_subgroup_namespace(
         self,
         subgroups: dict[str, BoundWrapper],
-        source_namespace: object,
+        argparse_namespace: argparse.Namespace,
+        target_namespace: object,
         names: list[str],
-        target_namespace: object | None = None,
         ):
-
-        if target_namespace is None:
-            target_namespace = source_namespace
 
         for bound_name, bound_wrapper in subgroups.items():
             child_wrapper = bound_wrapper.self
@@ -211,24 +226,24 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
             self._set_subgroup_namespace(
                 child_wrapper._subgroups,
-                source_namespace,
+                argparse_namespace,
                 names=new_names,
                 target_namespace=child_namespace,
             )
 
-            for attr_name in child_wrapper._arg_names:
-                if hasattr(source_namespace, attr_name):
-                    attr_value = getattr(source_namespace, attr_name)
-                    delattr(source_namespace, attr_name)
-                    setattr(child_namespace, attr_name, attr_value)
+            self._set_args(
+                child_wrapper,
+                argparse_namespace,
+                child_namespace,
+            )
 
             bound_wrapper.self.on_after_parse(new_names, bound_wrapper)
-
 
     def _set_subparser_namespace(
         self,
         flatten_subparsers: list[tuple[list[str], BoundWrapper]],
-        current_namespace: object,
+        argparse_namespace: argparse.Namespace,
+        leaf_namespace: object,
         names: list[str],
         ) -> NS:
 
@@ -238,6 +253,8 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         #            [root]
         # begin = -bound[0].length to -1
 
+        current_namespace = leaf_namespace
+
         for begin in range(-len(names), 0):
 
             for bound_names, bound_wrapper in flatten_subparsers:
@@ -245,10 +262,16 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                 if bound_names == names[begin:]:
 
                     parent_namespace = bound_wrapper._parent.namespace_type()
+
                     setattr(parent_namespace, bound_wrapper._bound_name, current_namespace)
-                    current_namespace = parent_namespace
+                    self._set_args(
+                        bound_wrapper._parent,
+                        argparse_namespace,
+                        parent_namespace,
+                    )
 
                     bound_wrapper.self.on_after_parse(bound_names, bound_wrapper)
+                    current_namespace = parent_namespace
 
         if isinstance(current_namespace, self.namespace_type):
             return current_namespace

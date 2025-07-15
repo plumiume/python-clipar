@@ -1,7 +1,10 @@
 from typing import overload, Self, Unpack, Final
 
 from .namespacewrapper import NamespaceWrapper, ArgumentParserOptions as NamespaceOptions
-from .groupwrapper import GroupWrapper, GroupWrapperOptions as GroupOptions
+from .groupwrapper import (
+    GroupWrapper, GroupWrapperOptions as GroupOptions,
+    MutuallyExclusiveGroupWrapper, MutuallyExclusiveGroupWrapperOptions as MutuallyExclusiveGroupWrapperOptions
+)
 
 class NamespaceWithOptions:
 
@@ -184,11 +187,12 @@ class NamespaceWithOptions:
             ```
         """
 
+        new_options = self.options | options
+
         if namespace_type is None:
-            new_options = self.options | options
             return NamespaceWithOptions(new_options)
 
-        return NamespaceWrapper[NS](namespace_type, options)
+        return NamespaceWrapper[NS](namespace_type, new_options)
 
 class GroupWithOptions:
 
@@ -513,11 +517,317 @@ class GroupWithOptions:
             ```
         """
 
+        new_options = self.options | options
+
         if namespace_type is None:
-            new_options = self.options | options
             return GroupWithOptions(new_options)
 
-        return GroupWrapper[NS](namespace_type, options)
+        return GroupWrapper[NS](namespace_type, new_options)
+
+class MutuallyExclusiveGroupWithOptions:
+
+    def __init__(
+        self,
+        options: MutuallyExclusiveGroupWrapperOptions
+        ):
+        self.options = options
+
+    @overload
+    def __call__[NS](
+        self,
+        namespace_type: type[NS],
+        /
+        ) -> MutuallyExclusiveGroupWrapper[NS]: ...
+    @overload
+    def __call__(
+        self,
+        namespace_type: None = None,
+        /,
+        **options: Unpack[MutuallyExclusiveGroupWrapperOptions],
+        ) -> Self: ...
+    def __call__[NS](
+        self,
+        namespace_type: type[NS] | None = None,
+        /,
+        **options: Unpack[MutuallyExclusiveGroupWrapperOptions]
+        ):
+        """
+        Create a new MutuallyExclusiveGroupWrapper instance or modify options for future use.
+        
+        This method configures mutually exclusive argument groups for command-line parsing.
+        Mutually exclusive groups ensure that only one argument from the group can be
+        specified at a time. When called with a namespace class type, it wraps the class
+        as a mutually exclusive argument group. When called without a type, it returns
+        a new MutuallyExclusiveGroupWithOptions instance with updated configuration.
+
+        Args:
+            namespace_type (`type[NS] | None`): The type of the namespace class to be wrapped
+                as a mutually exclusive argument group. If None, returns a new 
+                MutuallyExclusiveGroupWithOptions with updated options.
+
+            required (`bool`): Whether at least one argument from this mutually exclusive
+                group must be specified (default: False). When True, the parser will
+                fail if none of the group's arguments are provided.
+
+        Returns:
+            overload1 (`MutuallyExclusiveGroupWrapper[NS]`): If namespace_type is provided,
+                returns a configured MutuallyExclusiveGroupWrapper for immediate use.
+
+            overload2 (`MutuallyExclusiveGroupWithOptions`): If namespace_type is None,
+                returns a new MutuallyExclusiveGroupWithOptions with updated options.
+
+        Examples:
+            Basic mutually exclusive group creation:
+            
+            ```python
+            from clipar import namespace, mutually_exclusive_group
+            
+            @mutually_exclusive_group
+            class OutputModeGroup:
+                verbose: bool = False
+                quiet: bool = False
+                silent: bool = False
+            
+            @namespace
+            class Config:
+                input_file: str
+                output_mode: OutputModeGroup
+            
+            # Valid usage (only one option from the group)
+            config = Config.parse_args(['input.txt', '--verbose'])
+            # config.output_mode.verbose == True
+            # config.output_mode.quiet == False
+            
+            # Invalid usage (multiple options from the group would cause an error)
+            # Config.parse_args(['input.txt', '--verbose', '--quiet'])  # Error!
+            ```
+
+            Required mutually exclusive group:
+            
+            ```python
+            @mutually_exclusive_group(required=True)
+            class ActionGroup:
+                create: bool = False
+                update: bool = False
+                delete: bool = False
+            
+            @namespace
+            class DatabaseTool:
+                database_url: str
+                action: ActionGroup
+            
+            # Valid usage (one action is required)
+            tool = DatabaseTool.parse_args(['--database-url', 'db://localhost', '--create'])
+            # tool.action.create == True
+            
+            # Invalid usage (no action specified would cause an error)
+            # DatabaseTool.parse_args(['--database-url', 'db://localhost'])  # Error!
+            ```
+
+            Output format selection:
+            
+            ```python
+            @mutually_exclusive_group
+            class FormatGroup:
+                json_output: bool = False
+                xml_output: bool = False
+                csv_output: bool = False
+                yaml_output: bool = False
+            
+            @namespace
+            class DataConverter:
+                input_file: str
+                output_file: str = 'output.txt'
+                format_options: FormatGroup
+            
+            converter = DataConverter.parse_args([
+                'data.txt',
+                '--output-file', 'result.json',
+                '--json-output'
+            ])
+            # converter.format_options.json_output == True
+            # All other format options remain False
+            ```
+
+            Logging level selection with requirement:
+            
+            ```python
+            @mutually_exclusive_group(required=True)
+            class LogLevelGroup:
+                debug: bool = False
+                info: bool = False
+                warning: bool = False
+                error: bool = False
+            
+            @namespace
+            class Logger:
+                log_file: str = 'app.log'
+                log_level: LogLevelGroup
+            
+            logger = Logger.parse_args(['--log-file', 'debug.log', '--debug'])
+            # logger.log_level.debug == True
+            # One log level must always be specified
+            ```
+
+            Processing mode selection:
+            
+            ```python
+            @mutually_exclusive_group
+            class ProcessingModeGroup:
+                batch_mode: bool = False
+                interactive_mode: bool = False
+                daemon_mode: bool = False
+            
+            @namespace
+            class ProcessingTool:
+                config_file: str = 'config.ini'
+                max_workers: int = 4
+                mode: ProcessingModeGroup
+            
+            tool = ProcessingTool.parse_args([
+                '--config-file', 'prod.ini',
+                '--max-workers', '8',
+                '--batch-mode'
+            ])
+            # tool.mode.batch_mode == True
+            # Other modes remain False
+            ```
+
+            Chaining options for reusable configurations:
+            
+            ```python
+            # Create a base configuration
+            base_exclusive = mutually_exclusive_group()
+            
+            # Create a required version
+            required_exclusive = base_exclusive(required=True)
+            
+            @required_exclusive
+            class DatabaseActionGroup:
+                backup: bool = False
+                restore: bool = False
+                migrate: bool = False
+                reset: bool = False
+            
+            @namespace
+            class DatabaseManager:
+                connection_string: str
+                timeout: int = 30
+                action: DatabaseActionGroup
+            
+            # One action is required
+            manager = DatabaseManager.parse_args([
+                '--connection-string', 'db://localhost',
+                '--backup'
+            ])
+            # manager.action.backup == True
+            ```
+
+            Complex application with multiple exclusive groups:
+            
+            ```python
+            @mutually_exclusive_group(required=True)
+            class OperationGroup:
+                encode: bool = False
+                decode: bool = False
+                validate: bool = False
+            
+            @mutually_exclusive_group
+            class FormatGroup:
+                base64: bool = False
+                hex: bool = False
+                binary: bool = False
+            
+            @mutually_exclusive_group
+            class OutputGroup:
+                stdout: bool = False
+                file_output: bool = False
+                clipboard: bool = False
+            
+            @namespace
+            class Encoder:
+                input_data: str
+                operation: OperationGroup      # Required: must choose one
+                format_opts: FormatGroup       # Optional: can choose one or none
+                output_opts: OutputGroup       # Optional: can choose one or none
+            
+            encoder = Encoder.parse_args([
+                'mydata',
+                '--encode',        # Required operation
+                '--base64',        # Optional format
+                '--file-output'    # Optional output method
+            ])
+            # encoder.operation.encode == True
+            # encoder.format_opts.base64 == True
+            # encoder.output_opts.file_output == True
+            ```
+
+            Verbose/quiet mutually exclusive pattern:
+            
+            ```python
+            @mutually_exclusive_group
+            class VerbosityGroup:
+                verbose: bool = False
+                quiet: bool = False
+            
+            @namespace
+            class Tool:
+                input_file: str
+                output_file: str = 'output.txt'
+                verbosity: VerbosityGroup
+            
+            # Can be verbose
+            tool1 = Tool.parse_args(['input.txt', '--verbose'])
+            # tool1.verbosity.verbose == True
+            
+            # Can be quiet
+            tool2 = Tool.parse_args(['input.txt', '--quiet'])
+            # tool2.verbosity.quiet == True
+            
+            # Cannot be both (would cause error)
+            # Tool.parse_args(['input.txt', '--verbose', '--quiet'])  # Error!
+            ```
+
+            Nested mutually exclusive groups within namespace:
+            
+            ```python
+            @namespace
+            class ServerConfig:
+                port: int = 8080
+                host: str = 'localhost'
+                
+                @mutually_exclusive_group(required=True)
+                class AuthMethod:
+                    token_auth: bool = False
+                    password_auth: bool = False
+                    certificate_auth: bool = False
+                
+                @mutually_exclusive_group
+                class LogDestination:
+                    log_to_file: bool = False
+                    log_to_stdout: bool = False
+                    log_to_syslog: bool = False
+                
+                auth: AuthMethod
+                logging: LogDestination
+            
+            config = ServerConfig.parse_args([
+                '--port', '9090',
+                '--token-auth',      # Required auth method
+                '--log-to-file'      # Optional log destination
+            ])
+            # config.auth.token_auth == True
+            # config.logging.log_to_file == True
+            ```
+        """
+
+        new_options = self.options | options
+
+        if namespace_type is None:
+            return MutuallyExclusiveGroupWithOptions(new_options)
+
+        return MutuallyExclusiveGroupWrapper[NS](namespace_type, new_options)
 
 namespace: Final = NamespaceWithOptions({}).__call__
 group: Final = GroupWithOptions({}).__call__
+mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions({}).__call__()
