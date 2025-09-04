@@ -281,6 +281,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             f"namespace type {self.namespace_type}."
         )
 
+    ## Public API
 
     def parse_args(self, args: list[str] | None = None) -> NS:
         """

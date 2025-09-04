@@ -459,6 +459,11 @@ class BaseWrapper[NS](abc.ABC):
             for name, bound_wrapper in self._subgroups.items()
         ))
 
+    def _bind(self, name: str, parent: 'BaseWrapper') -> 'BoundWrapper':
+        return BoundWrapper(name, parent, self)
+
+    ## Hooks
+
     def on_before_bind(self, bound_name: str, wrapper: 'BaseWrapper'):
         pass
     def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper'):
@@ -469,8 +474,57 @@ class BaseWrapper[NS](abc.ABC):
     def on_after_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper | None'):
         pass
 
-    def _bind(self, name: str, parent: 'BaseWrapper') -> 'BoundWrapper':
-        return BoundWrapper(name, parent, self)
+    ## Public API
+
+    def add_wrapper(
+        self,
+        name: str,
+        wrapper: 'SubparserWrapper | SubgroupWrapper'
+        ):
+
+        """
+        Dynamically add a wrapper to create nested command structures.
+        
+        This method enables runtime construction of nested CLI structures by adding
+        subparser or subgroup wrappers to the current container. It's primarily used
+        to build complex configurations combining namespace, group, and mutually
+        exclusive group decorators.
+        
+        Args:
+            name: The identifier for the wrapper. This becomes the subcommand name
+                for subparsers or the group identifier for subgroups.
+            wrapper: The wrapper instance to add. Must be either a SubparserWrapper
+                (e.g., from @namespace decorator) or SubgroupWrapper (e.g., from 
+                @group or @mutually_exclusive_group decorators).
+        
+        Raises:
+            TypeError: If the wrapper type is not SubparserWrapper or SubgroupWrapper.
+        
+        Note:
+            - Calls binding hooks (on_before_bind, on_after_bind) during registration
+            - Creates a BoundWrapper instance to manage the relationship
+            - Enables aliasing by allowing the same wrapper to be added with different names
+            - For @namespace wrappers: Creates independent subcommands where only the
+              selected subcommand becomes active (others remain NotSelected)
+            - For @group/@mutually_exclusive_group wrappers: All arguments are flattened
+              to the top level, and aliasing may cause argument name conflicts
+        
+        Example:
+            ```python
+            # Add a database configuration group
+            database_group = GroupWrapper(DatabaseConfig) 
+            main_wrapper.add_wrapper("database", database_group)
+            
+            # Add subcommand for nested namespace
+            config_ns = NamespaceWrapper(ConfigNamespace)
+            main_wrapper.add_wrapper("config", config_ns)
+            
+            # Create alias (works for namespaces, may conflict for groups)
+            main_wrapper.add_wrapper("cfg", config_ns)
+            ```
+        """
+
+        self._add_wrapper(self._container, name, wrapper)
 
 class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
     def __init__(
