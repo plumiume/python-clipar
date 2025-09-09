@@ -259,6 +259,131 @@ class TestBaseWrapper:
             wrapper.on_after_bind("test", Mock())
             wrapper.on_before_parse(["test"], Mock())
             wrapper.on_after_parse(["test"], Mock())
+    
+    def test_add_wrapper_with_subparser(self):
+        """Test add_wrapper method with SubparserWrapper"""
+        class ConcreteWrapper(BaseWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        class MockSubparserWrapper(SubparserWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            subparser = MockSubparserWrapper(MockNamespace)
+            
+            # Test adding subparser wrapper
+            wrapper.add_wrapper("test_subparser", subparser)
+            
+            # Verify subparser was added
+            assert "test_subparser" in wrapper._subparsers
+            assert isinstance(wrapper._subparsers["test_subparser"], BoundWrapper)
+            assert wrapper._subparsers["test_subparser"]._bound_name == "test_subparser"
+            assert wrapper._subparsers["test_subparser"]._parent is wrapper
+            assert wrapper._subparsers["test_subparser"]._self is subparser
+    
+    def test_add_wrapper_with_subgroup(self):
+        """Test add_wrapper method with SubgroupWrapper"""
+        class ConcreteWrapper(BaseWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        class MockSubgroupWrapper(SubgroupWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            subgroup = MockSubgroupWrapper(MockNamespace)
+            
+            # Test adding subgroup wrapper
+            wrapper.add_wrapper("test_subgroup", subgroup)
+            
+            # Verify subgroup was added
+            assert "test_subgroup" in wrapper._subgroups
+            assert isinstance(wrapper._subgroups["test_subgroup"], BoundWrapper)
+            assert wrapper._subgroups["test_subgroup"]._bound_name == "test_subgroup"
+            assert wrapper._subgroups["test_subgroup"]._parent is wrapper
+            assert wrapper._subgroups["test_subgroup"]._self is subgroup
+    
+    def test_add_wrapper_calls_hooks(self):
+        """Test add_wrapper method calls binding hooks"""
+        class ConcreteWrapper(BaseWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        class MockSubparserWrapper(SubparserWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            subparser = MockSubparserWrapper(MockNamespace)
+            
+            # Mock the hook methods
+            subparser.on_before_bind = Mock()
+            subparser.on_after_bind = Mock()
+            
+            # Test adding wrapper
+            wrapper.add_wrapper("test_hooks", subparser)
+            
+            # Verify hooks were called
+            subparser.on_before_bind.assert_called_once_with("test_hooks", wrapper)
+            subparser.on_after_bind.assert_called_once_with("test_hooks", wrapper)
+    
+    def test_add_wrapper_with_invalid_wrapper_type(self):
+        """Test add_wrapper method with invalid wrapper type"""
+        class ConcreteWrapper(BaseWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            invalid_wrapper = Mock()  # Not a SubparserWrapper or SubgroupWrapper
+            
+            # Test that TypeError is raised for invalid wrapper type
+            with pytest.raises(TypeError, match="Wrapper must be either SubparserWrapper or SubgroupWrapper"):
+                wrapper.add_wrapper("invalid", invalid_wrapper)
+    
+    def test_add_wrapper_aliasing_behavior(self):
+        """Test add_wrapper method aliasing behavior"""
+        class ConcreteWrapper(BaseWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        class MockSubparserWrapper(SubparserWrapper):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            subparser = MockSubparserWrapper(MockNamespace)
+            
+            # Add same wrapper with different names (aliasing)
+            wrapper.add_wrapper("original", subparser)
+            wrapper.add_wrapper("alias", subparser)
+            
+            # Verify both aliases exist and reference the same wrapper
+            assert "original" in wrapper._subparsers
+            assert "alias" in wrapper._subparsers
+            assert wrapper._subparsers["original"]._self is subparser
+            assert wrapper._subparsers["alias"]._self is subparser
+            
+            # Verify they have different bound names
+            assert wrapper._subparsers["original"]._bound_name == "original"
+            assert wrapper._subparsers["alias"]._bound_name == "alias"
 
 
 class TestSubparserWrapper:

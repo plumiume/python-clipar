@@ -66,8 +66,7 @@ class TestSubParserOptions:
         options: SubParserOptions = {
             "title": "subcommands",
             "metavar": "{command1,command2}",
-            "required": True,
-            "dest": "command"
+            "required": True
         }
         
         assert options.get("title") == "subcommands"
