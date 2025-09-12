@@ -227,8 +227,8 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             self._set_subgroup_namespace(
                 child_wrapper._subgroups,
                 argparse_namespace,
-                names=new_names,
-                target_namespace=child_namespace,
+                child_namespace,
+                new_names,
             )
 
             self._set_args(
@@ -262,8 +262,15 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                 if bound_names == names[begin:]:
 
                     parent_namespace = bound_wrapper._parent.namespace_type()
-
                     setattr(parent_namespace, bound_wrapper._bound_name, current_namespace)
+
+                    self._set_subgroup_namespace(
+                        bound_wrapper.self._subgroups,
+                        argparse_namespace,
+                        current_namespace,
+                        bound_names
+                    )
+
                     self._set_args(
                         bound_wrapper._parent,
                         argparse_namespace,

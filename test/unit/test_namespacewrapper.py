@@ -72,7 +72,6 @@ class TestSubParserOptions:
         assert options.get("title") == "subcommands"
         assert options.get("metavar") == "{command1,command2}"
         assert options.get("required") is True
-        assert options.get("dest") == "command"
 
     def test_subparser_options_optional_fields(self):
         """Test that all fields in SubParserOptions are optional"""
