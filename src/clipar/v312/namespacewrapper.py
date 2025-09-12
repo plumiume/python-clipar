@@ -102,6 +102,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
     def _get_subparsers(self) -> argparse._SubParsersAction:
         if self._parser_subparsers is None:
             self._parser_subparsers = self._parser.add_subparsers(
+                dest="_clipar_leaf_name",
                 **self._subparser_options,
             )
         return self._parser_subparsers
