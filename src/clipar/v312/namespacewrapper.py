@@ -156,21 +156,13 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
         bound_names = []
 
-        if self is not leaf_wrapper:
-            
-            for bound_names, bound_wrapper in flatten_subparsers:
-                if (
-                    bound_names
-                    and bound_names[0] == leaf_name
-                    and bound_wrapper._self is leaf_wrapper
-                    ):
-                    break
-
-            if not bound_names:
-                raise ValueError(
-                    f"Leaf wrapper not found in the flattened subparsers."
-                    f" ( flatten_subparsers: {flatten_subparsers} )"
-                )
+        if self is leaf_wrapper:
+            bound_names = []
+        else:
+            bound_names = next(filter(lambda item: (
+                item[0] and item[0][-1] == leaf_name
+                and item[1].self is leaf_wrapper
+            ), flatten_subparsers))[0]
 
         leaf_namespace = leaf_wrapper.namespace_type()
 
