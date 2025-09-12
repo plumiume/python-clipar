@@ -102,6 +102,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
     def _get_subparsers(self) -> argparse._SubParsersAction:
         if self._parser_subparsers is None:
             self._parser_subparsers = self._parser.add_subparsers(
+                dest="_clipar_leaf_name",
                 **self._subparser_options,
             )
         return self._parser_subparsers
@@ -152,11 +153,21 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
         leaf_wrapper: SubparserWrapper = getattr(argparse_namespace, '_clipar_wrapper')
 
+<<<<<<< HEAD
+=======
+        bound_names = []
+
+>>>>>>> dev/2509
         if self is leaf_wrapper:
             bound_names = []
         else:
             bound_names = next(filter(lambda item: (
+<<<<<<< HEAD
                 item[1].self is leaf_wrapper
+=======
+                item[0] and item[0][-1] == leaf_name
+                and item[1].self is leaf_wrapper
+>>>>>>> dev/2509
             ), flatten_subparsers))[0]
 
         leaf_namespace = leaf_wrapper.namespace_type()
