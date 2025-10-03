@@ -84,6 +84,48 @@ class TestBasicNamespace:
         assert config.enabled is True
         assert config.mode == "slow"
 
+    def test_namespace_with_union_types(self):
+        """Test namespace with UnionType support in argument parsing"""
+        @namespace
+        class ConfigWithUnionTypes:
+            value: str | int  # UnionType support
+            mode: str = "auto"
+
+        # Test with string value
+        config = ConfigWithUnionTypes.parse_args(["hello"])
+        assert config.value == "hello"
+        assert config.mode == "auto"
+
+        # Test with integer value
+        config = ConfigWithUnionTypes.parse_args(["42"])
+        assert config.value == "42"  # argparse converts to string by default
+
+    def test_namespace_with_improved_type_handling(self):
+        """Test improved type handling with get_type_hints"""
+        from typing import Optional
+        
+        @namespace
+        class TypedConfig:
+            required_str: str
+            optional_int: Optional[int] = None
+            flag: bool = False
+
+        # Test with required argument
+        config = TypedConfig.parse_args(["test_string"])
+        assert config.required_str == "test_string"
+        assert config.optional_int is None
+        assert config.flag is False
+
+        # Test with optional argument
+        config = TypedConfig.parse_args([
+            "another_string", 
+            "--optional-int", "123",
+            "--flag"
+        ])
+        assert config.required_str == "another_string"
+        assert config.optional_int == 123
+        assert config.flag is True
+
 
 class TestGroupFunctionality:
     """Group functionality integration tests"""
@@ -865,6 +907,28 @@ class TestNestedDecorators:
         assert config.log_format is not NotSelected
         assert config.log_format.json is True
         assert config.log_format.plain is False
+
+    def test_enhanced_command_tracking(self):
+        """Test enhanced command tracking with TrackableSubParsersAction"""
+        @namespace
+        class MainApp:
+            global_flag: bool = False
+
+            @namespace
+            class sub1:
+                sub1_arg: str = "default1"
+
+                @namespace
+                class nested:
+                    nested_arg: str = "nested_default"
+
+        # Test command chain tracking
+        result = MainApp.parse_args(["sub1", "nested", "--nested-arg", "test_value"])
+        
+        # Verify nested namespace structure
+        assert hasattr(result, 'sub1')
+        assert hasattr(result.sub1, 'nested')
+        assert result.sub1.nested.nested_arg == "test_value"
 
 
 class TestInnerClassDecorators:

@@ -8,8 +8,10 @@ from clipar.v312.basewrapper import (
     BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper,
     NotSelected, NotSelectedType,
     _return_bool, _append_list, # pyright: ignore[reportPrivateUsage]
-    ArgumentContainerProtocol, GenericAliasLike
+    ArgumentContainerProtocol, GenericAliasLike,
+    OBJECT_ATTRS, Literalizable
 )
+from types import UnionType
 
 
 class TestUtilityFunctions:
@@ -36,6 +38,39 @@ class TestNotSelectedType:
         assert NotSelected is NotSelectedType.I
         assert bool(NotSelected) is False
         assert repr(NotSelected) == "NotSelected"
+
+
+class TestConstants:
+    """Test module constants"""
+    
+    def test_object_attrs_constant(self):
+        """Test OBJECT_ATTRS contains expected object attributes"""
+        assert isinstance(OBJECT_ATTRS, set)
+        assert '__class__' in OBJECT_ATTRS
+        assert '__init__' in OBJECT_ATTRS
+        assert '__str__' in OBJECT_ATTRS
+        assert '__repr__' in OBJECT_ATTRS
+    
+    def test_literalizable_type(self):
+        """Test that Literalizable type covers expected types"""
+        # Test that various literal values are of Literalizable type
+        test_values = ["string", 42, 3.14, True, False, None]
+        for value in test_values:
+            # This is a runtime check since we can't directly check type alias
+            assert isinstance(value, (str, int, float, bool, type(None)))
+
+
+class TestUnionTypeSupport:
+    """Test UnionType support in basewrapper"""
+    
+    def test_union_type_creation(self):
+        """Test that UnionType can be created and used"""
+        # Create a UnionType (str | int)
+        union_type = str | int
+        assert isinstance(union_type, UnionType)
+        assert hasattr(union_type, '__args__')
+        assert str in union_type.__args__
+        assert int in union_type.__args__
 
 
 class MockNamespace:

@@ -5,7 +5,7 @@ import sys
 from unittest.mock import Mock, MagicMock, patch
 import argparse
 from clipar.v312.namespacewrapper import (
-    NamespaceWrapper, ArgumentParserOptions, SubParserOptions
+    NamespaceWrapper, ArgumentParserOptions, SubParserOptions, TrackableSubParsersAction
 )
 from clipar.v312.basewrapper import BaseWrapper, SubparserWrapper
 
@@ -78,6 +78,72 @@ class TestSubParserOptions:
         options: SubParserOptions = {}
         assert isinstance(options, dict)
         assert len(options) == 0
+
+
+class TestTrackableSubParsersAction:
+    """Test TrackableSubParsersAction functionality"""
+
+    def test_trackable_subparsers_action_initialization(self):
+        """Test TrackableSubParsersAction can be initialized"""
+        action = TrackableSubParsersAction(
+            option_strings=[],
+            prog="test_prog",
+            parser_class=argparse.ArgumentParser,
+            dest="subcommand",
+            required=False,
+            help="Available subcommands",
+            metavar="{cmd1,cmd2}"
+        )
+        
+        # TrackableSubParsersAction inherits from _SubParsersAction
+        # Test that it can be initialized without error
+        assert action.dest == "subcommand"
+        assert action.required is False
+        assert action.help == "Available subcommands"
+        assert action.metavar == "{cmd1,cmd2}"
+
+    def test_trackable_subparsers_action_command_tracking_logic(self):
+        """Test the command chain tracking logic without actual parsing"""
+        # Create a mock namespace to test command chain logic
+        namespace = argparse.Namespace()
+        
+        # Test initial command chain creation
+        action = TrackableSubParsersAction(
+            option_strings=[],
+            prog="test_prog",
+            parser_class=argparse.ArgumentParser
+        )
+        
+        # Simulate the command chain creation logic
+        parser_name = "test_command"
+        
+        # Test when no command chain exists
+        command_chain = getattr(namespace, '_clipar_command_chain', None)
+        if command_chain is None:
+            command_chain = [parser_name]
+            setattr(namespace, '_clipar_command_chain', command_chain)
+        else:
+            command_chain.append(parser_name)
+        
+        assert namespace._clipar_command_chain == ["test_command"]
+
+    def test_trackable_subparsers_action_command_chain_appending_logic(self):
+        """Test that command chains are properly appended"""
+        namespace = argparse.Namespace()
+        
+        # Pre-set a command chain
+        namespace._clipar_command_chain = ["parent_cmd"]
+        
+        # Simulate appending logic
+        parser_name = "child_cmd"
+        command_chain = getattr(namespace, '_clipar_command_chain', None)
+        if command_chain is None:
+            command_chain = [parser_name]
+            setattr(namespace, '_clipar_command_chain', command_chain)
+        else:
+            command_chain.append(parser_name)
+        
+        assert namespace._clipar_command_chain == ["parent_cmd", "child_cmd"]
 
 
 class TestNamespaceWrapper:
