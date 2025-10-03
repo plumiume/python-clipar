@@ -1,3 +1,4 @@
+# pyright: reportUnnecessaryIsInstance=false
 import abc
 from typing import (
     overload, Self, Protocol, runtime_checkable, Any,
@@ -5,8 +6,9 @@ from typing import (
     Iterable, Sequence,
     TypedDict, Unpack,
     TypeGuard, Final,
+    get_type_hints, get_args, get_origin,
 )
-from types import UnionType
+from types import UnionType, EllipsisType, NoneType
 from enum import Enum
 
 from itertools import chain
@@ -14,7 +16,8 @@ import argparse
 
 from .class_ast import ClassAstHolder
 
-Literalizable = str | int | float | bool | None
+Literalizable = str | int | float | bool | NoneType
+OBJECT_ATTRS = set(dir(object))
 
 def _return_bool(value: bool) -> bool:
     return value
@@ -51,8 +54,8 @@ class AddArgumentOptions(TypedDict, total=False):
     nargs: int | Literal['?', '*', '+'] | None
     const: object
     default: object
-    type: Callable[[str], Any] | argparse.FileType | str
-    choices: Iterable | None
+    type: Callable[[str], object] | argparse.FileType | str
+    choices: Iterable[object] | None
     required: bool
     help: str | None
     metavar: str | tuple[str, ...] | None
@@ -79,20 +82,20 @@ class ArgumentContainerProtocol(Protocol):
         *,
         required: bool = False
         ) -> 'ArgumentContainerProtocol':...
-    def set_defaults(self, **kwargs):...
+    def set_defaults(self, **kwargs: Any):...
     def get_default(self, dest: str) -> object:...
 
 @runtime_checkable
-class SupportsOriginAndArgs(Protocol):
-    __origin__: 'type | SupportsOriginAndArgs'
-    __args__: tuple
+class GenericAliasLike(Protocol):
+    __args__: tuple['GenericAliasLike | type | None', ...] | tuple[Any, EllipsisType]
+    __origin__: Any
 
 class BaseWrapper[NS](abc.ABC):
 
     def __init__(self, namespace_type: type[NS]):
         self.namespace_type = namespace_type
-        self._subparsers: dict[str, 'BoundWrapper'] = {}
-        self._subgroups: dict[str, 'BoundWrapper'] = {}
+        self._subparsers: dict[str, 'BoundWrapper[SubparserWrapper[Any]]'] = {}
+        self._subgroups: dict[str, 'BoundWrapper[SubgroupWrapper[Any]]'] = {}
         self._arg_names: set[str] = set()
 
         self._container = self.configure_container()
@@ -101,7 +104,7 @@ class BaseWrapper[NS](abc.ABC):
     @overload
     def __get__(
         self,
-        instance: 'WrapperHolder | type | None',
+        instance: 'WrapperHolder[Any] | type | None',
         owner: type | None = None
         ) -> Self:...
     @overload
@@ -144,13 +147,17 @@ class BaseWrapper[NS](abc.ABC):
         namespace_type: type[NS]
         ):
 
+        # dependencies: attr order, attr doc
         assign_infos = ClassAstHolder(namespace_type).get_assign_infos()
+
+        annotations = get_type_hints(namespace_type)
+        attributes = set(dir(namespace_type)) - OBJECT_ATTRS
 
         for assign_name, assign_info in assign_infos.items():
 
-            in_annotations = assign_name in namespace_type.__annotations__
-            in_dict = assign_name in namespace_type.__dict__
-            default = namespace_type.__dict__.get(assign_name, None)
+            in_annotations = assign_name in annotations
+            in_dict = assign_name in attributes
+            default: Any | None = getattr(namespace_type, assign_name, None)
 
             if isinstance(default, type):
                 raise TypeError(
@@ -160,38 +167,28 @@ class BaseWrapper[NS](abc.ABC):
 
             elif in_dict and isinstance(default, SubparserWrapper | SubgroupWrapper):
                 self._add_wrapper(
-                    container,
-                    assign_name,
-                    default
-                )
-
-            elif in_annotations and in_dict:
-                self._arg_names.add(assign_name)
-                self._add_opt(
-                    container,
-                    assign_name,
-                    namespace_type.__annotations__[assign_name],
-                    default,
-                    assign_info.doc,
-                )
-
-            elif in_annotations:
-                self._arg_names.add(assign_name)
-                self._add_req(
-                    container,
-                    assign_name,
-                    namespace_type.__annotations__[assign_name],
-                    assign_info.doc,
+                    container=container,
+                    name=assign_name,
+                    wrapper=default # pyright: ignore[reportUnknownArgumentType]
                 )
 
             elif in_dict:
                 self._arg_names.add(assign_name)
                 self._add_opt(
-                    container,
-                    assign_name,
-                    type(default),
-                    default,
-                    assign_info.doc,
+                    container=container,
+                    name=assign_name,
+                    annotation=annotations.get(assign_name, type(default)),
+                    default=default,
+                    doc=assign_info.doc,
+                )
+
+            elif in_annotations:
+                self._arg_names.add(assign_name)
+                self._add_req(
+                    container=container,
+                    name=assign_name,
+                    annotation=annotations[assign_name],
+                    doc=assign_info.doc,
                 )
 
             else: # Never
@@ -203,17 +200,15 @@ class BaseWrapper[NS](abc.ABC):
         self,
         container: ArgumentContainerProtocol, # for compatibility, not used
         name: str,
-        wrapper: 'SubparserWrapper | SubgroupWrapper'
+        wrapper: 'SubparserWrapper[Any] | SubgroupWrapper[Any]'
         ):
 
         wrapper.on_before_bind(name, self)
 
-        bound_wrapper = wrapper._bind(name, self)
-
         if isinstance(wrapper, SubparserWrapper):
-            self._subparsers[name] = bound_wrapper
+            self._subparsers[name] = wrapper._bind(name, self)
         elif isinstance(wrapper, SubgroupWrapper):
-            self._subgroups[name] = bound_wrapper
+            self._subgroups[name] = wrapper._bind(name, self)
         else:
             raise TypeError(
                 f"Wrapper must be either SubparserWrapper or SubgroupWrapper, "
@@ -231,7 +226,7 @@ class BaseWrapper[NS](abc.ABC):
         self,
         container: ArgumentContainerProtocol,
         name: str,
-        annotation: type | SupportsOriginAndArgs,
+        annotation: type | UnionType | GenericAliasLike,
         doc: str | None
         ):
 
@@ -247,7 +242,7 @@ class BaseWrapper[NS](abc.ABC):
         self,
         container: ArgumentContainerProtocol,
         name: str,
-        annotation: type | SupportsOriginAndArgs,
+        annotation: GenericAliasLike | type,
         default: object,
         doc: str | None
         ):
@@ -263,7 +258,7 @@ class BaseWrapper[NS](abc.ABC):
         else:
             action = 'store'
 
-        container.add_argument(
+        action = container.add_argument(
             name_or_flag,
             action=action,
             help=doc,
@@ -274,45 +269,22 @@ class BaseWrapper[NS](abc.ABC):
 
     def _parse_annotation(
         self,
-        annotation: UnionType | type | SupportsOriginAndArgs
+        annotation: GenericAliasLike | UnionType | type
         ) -> _ParseAnnotationResult:
 
-        if (
-            isinstance(annotation, SupportsOriginAndArgs)
-            and isinstance(annotation.__origin__, type)
-            and issubclass(annotation.__origin__, Sequence)
-            ):
+        nargs, annotation_args = self._determine_nargs_and_generic_args(annotation)
 
-            splited_annotation = annotation.__args__
+        flatten_union_and_literal = self._flatten_union_and_literal(annotation_args)
 
-            if issubclass(annotation.__origin__, tuple):
-                if ... in annotation.__args__:
-                    nargs = '*'
-                else:
-                    nargs = len(annotation.__args__)
-
-            else:
-                nargs = '*'
-
-        elif isinstance(annotation, UnionType):
-            splited_annotation = annotation.__args__
-            nargs = '*'
-
-        else:
-            splited_annotation = (annotation, )
-            nargs = None
-
-        flatten_union_and_literal = self._flatten_union_and_literal(splited_annotation)
-
-        pick_choices_is_required = [
+        pick_choices_are_required = [
             all(
-                not isinstance(ann, type | SupportsOriginAndArgs)
+                isinstance(ann, Literalizable)
                 for ann in literals
             )
             for literals in flatten_union_and_literal.values()
         ]
 
-        if all(pick_choices_is_required):
+        if all(pick_choices_are_required):
             choices = list(chain.from_iterable(
                 flatten_union_and_literal.values()
             ))
@@ -326,7 +298,7 @@ class BaseWrapper[NS](abc.ABC):
         else:
             type_ = self._multi_type_builder(
                 flatten_union_and_literal,
-                pick_choices_is_required
+                pick_choices_are_required
             )
 
         return self._ParseAnnotationResult(
@@ -335,53 +307,90 @@ class BaseWrapper[NS](abc.ABC):
             choices=choices
         )
 
+    def _determine_nargs_and_generic_args(
+        self,
+        annotation: GenericAliasLike | UnionType | type
+        ) -> tuple[
+            int | Literal['?', '*', '+'] | None,
+            tuple[GenericAliasLike | type | None, ...]
+        ]:
+
+        tp_origin = get_origin(annotation)
+        tp_args = get_args(annotation)
+
+        if isinstance(annotation, type):
+            return None, (annotation, )
+
+        if isinstance(annotation, UnionType):
+            return None, tp_args
+
+        if tp_origin in (Literal, Union):
+            return None, tp_args
+
+        if not isinstance(tp_origin, type):
+            raise TypeError(
+                f"Annotation {annotation} has invalid origin {tp_origin}."
+            )
+
+        no_ellipsis_args = tuple(a for a in tp_args if a is not ...)
+
+        if ... in tp_args:
+            return '*', no_ellipsis_args
+
+        if issubclass(tp_origin, tuple):
+            return len(no_ellipsis_args), no_ellipsis_args
+
+        if issubclass(tp_origin, Sequence):
+            return '*', no_ellipsis_args
+
+        return None, (annotation, )
+
     def _flatten_union_and_literal(
         self,
-        annotations: tuple[UnionType | type | SupportsOriginAndArgs, ...]
+        annotations: tuple[GenericAliasLike | UnionType | type | None, ...]
         ) -> dict[
-            type | SupportsOriginAndArgs,
-            list[type | SupportsOriginAndArgs | Literalizable]
+            GenericAliasLike | type,
+            list[GenericAliasLike | type | Literalizable]
         ]:
 
         union_args = list(chain.from_iterable(
             ann.__args__
             if isinstance(ann, UnionType)
             else ann.__args__
-            if isinstance(ann, SupportsOriginAndArgs) and ann.__origin__ is Union
+            if isinstance(ann, GenericAliasLike) and ann.__origin__ is Union
             else (ann, )
             for ann in annotations
         ))
 
         literal_args = list(chain.from_iterable(
             ann.__args__
-            if isinstance(ann, SupportsOriginAndArgs) and ann.__origin__ is Literal
+            if isinstance(ann, GenericAliasLike) and ann.__origin__ is Literal
             else [ann]
             for ann in union_args
         ))
 
         ret: dict[
-            type | SupportsOriginAndArgs,
-            list[type | SupportsOriginAndArgs | Literalizable]
+            type | GenericAliasLike,
+            list[type | GenericAliasLike | Literalizable]
         ] = {
             ann: [ann]
             for ann in literal_args
-            if isinstance(ann, type | SupportsOriginAndArgs)
+            if isinstance(ann, type | GenericAliasLike)
         }
 
         for ann in literal_args:
-            if not isinstance(ann, Literalizable):
-                continue
-            ret.setdefault(type(ann), []).append(ann)
+            if isinstance(ann, Literalizable):
+                ret.setdefault(type(ann), []).append(ann)
 
         return ret
 
     def _multi_type_builder(
         self,
         flatten_union_and_literal: dict[
-            type | SupportsOriginAndArgs,
-            list[type | SupportsOriginAndArgs | Literalizable]
+            type |  GenericAliasLike,
+            list[type |  GenericAliasLike | Literalizable]
         ],
-        pick_choices_is_required: list[bool]
+        pick_choices_are_required: list[bool]
         ):
 
         def type_impl(value: str) -> object:
@@ -389,7 +398,7 @@ class BaseWrapper[NS](abc.ABC):
                 zipped = zip(
                     flatten_union_and_literal.keys(),
                     flatten_union_and_literal.values(),
-                    pick_choices_is_required
+                    pick_choices_are_required
                 )
                 for ann, literals, pick_choices in zipped:
 
@@ -415,11 +424,11 @@ class BaseWrapper[NS](abc.ABC):
 
     def _get_type_from_type_or_generic_alias(
         self,
-        annotation: type | SupportsOriginAndArgs
+        annotation: GenericAliasLike | type
         ) -> type:
 
         tmp = annotation
-        while isinstance(tmp, SupportsOriginAndArgs):
+        while isinstance(tmp, GenericAliasLike):
             tmp = tmp.__origin__
         if not isinstance(tmp, type):
             raise TypeError(
@@ -427,7 +436,7 @@ class BaseWrapper[NS](abc.ABC):
             )
         return tmp
 
-    def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper']]:
+    def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper[SubparserWrapper[Any]]']]:
 
         return list(chain.from_iterable(
             chain(
@@ -443,7 +452,7 @@ class BaseWrapper[NS](abc.ABC):
             for name, bound_wrapper in self._subparsers.items()
         ))
 
-    def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper']]:
+    def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper[SubgroupWrapper[Any]]']]:
 
         return list(chain.from_iterable(
             chain(
@@ -459,19 +468,19 @@ class BaseWrapper[NS](abc.ABC):
             for name, bound_wrapper in self._subgroups.items()
         ))
 
-    def _bind(self, name: str, parent: 'BaseWrapper') -> 'BoundWrapper':
+    def _bind(self, name: str, parent: 'BaseWrapper[Any]') -> 'BoundWrapper[Self]':
         return BoundWrapper(name, parent, self)
 
     ## Hooks
 
-    def on_before_bind(self, bound_name: str, wrapper: 'BaseWrapper'):
+    def on_before_bind(self, bound_name: str, wrapper: 'BaseWrapper[Any]'):
         pass
-    def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper'):
+    def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper[Any]'):
         pass
 
-    def on_before_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper | None'):
+    def on_before_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
-    def on_after_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper | None'):
+    def on_after_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
 
     ## Public API
@@ -479,7 +488,7 @@ class BaseWrapper[NS](abc.ABC):
     def add_wrapper(
         self,
         name: str,
-        wrapper: 'SubparserWrapper | SubgroupWrapper'
+        wrapper: 'SubparserWrapper[Any] | SubgroupWrapper[Any]'
         ):
 
         """
@@ -558,15 +567,25 @@ class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
 class SubgroupWrapper[NS](BaseWrapper[NS], abc.ABC):
     pass
 
-class WrapperHolder[W: BaseWrapper]: pass
+class WrapperHolder[W: BaseWrapper[Any]]: pass
 
-class BoundWrapper[W: BaseWrapper](WrapperHolder[W]):
+class BoundWrapper[W: BaseWrapper[Any]](WrapperHolder[W]):
 
-    def __init__(self, name: str, parent_wrapper: BaseWrapper, self_wrapper: W):
+    def __init__(self, name: str, parent_wrapper: BaseWrapper[Any], self_wrapper: W):
         self._bound_name = name
         self._parent = parent_wrapper
         self._self = self_wrapper
 
     @property
-    def self(self_) -> BaseWrapper:
+    def bound_name(self) -> str:
+        return self._bound_name
+
+    @property
+    def parent(self) -> BaseWrapper[Any]:
+        return self._parent
+
+    @property
+    def self(self_) -> W:
         return self_._self
+
+

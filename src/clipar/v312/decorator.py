@@ -830,4 +830,4 @@ class MutuallyExclusiveGroupWithOptions:
 
 namespace: Final = NamespaceWithOptions({}).__call__
 group: Final = GroupWithOptions({}).__call__
-mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions({}).__call__()
+mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions({}).__call__

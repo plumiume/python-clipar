@@ -1,8 +1,6 @@
-from typing import Self, Unpack, TypedDict, TypeVar, Generic
+from typing import Self, Unpack, TypedDict, Any
 
 from .basewrapper import BaseWrapper, AddArgumentOptions, ArgumentContainerProtocol, SubgroupWrapper
-
-_NS = TypeVar('_NS')
 
 class LazyContainer(ArgumentContainerProtocol):
 
@@ -138,6 +136,7 @@ class LazyContainer(ArgumentContainerProtocol):
         supports_ameg_group = None
 
         if isinstance(self.options, self._ArgumentGroup):
+            # maybe: DeprecationWarning: Nesting argument groups is deprecated.
             supports_aa_group = supports_add_argument_group.add_argument_group(
                 title=(
                     self.options.title
@@ -150,7 +149,7 @@ class LazyContainer(ArgumentContainerProtocol):
             )
             supports_ameg_group = supports_aa_group
 
-        elif isinstance(self.options, self._MutuallyExclusiveGroup):
+        elif isinstance(self.options, self._MutuallyExclusiveGroup): # pyright: ignore[reportUnnecessaryIsInstance]
 
             if supports_add_mutually_exclusive_group is None:
                 raise TypeError(
@@ -178,7 +177,7 @@ class LazyContainer(ArgumentContainerProtocol):
                 supports_ameg_group
             )
 
-    def set_defaults(self, **kwargs):
+    def set_defaults(self, **kwargs: Any):
         self.defaults.update(kwargs)
 
     def get_default(self, dest: str) -> object:
@@ -194,7 +193,7 @@ class GroupWrapperOptions(TypedDict, total=False):
     conflict_handler: str
     "Conflict handler for the argument group, default is 'error'"
 
-class GroupWrapper(SubgroupWrapper[_NS]):
+class GroupWrapper[_NS](SubgroupWrapper[_NS]):
 
     def __init__(
         self,
@@ -216,14 +215,14 @@ class GroupWrapper(SubgroupWrapper[_NS]):
     def configure_container(self) -> LazyContainer:
         return self._lazy_container
 
-    def on_after_bind(self, bound_name: str, wrapper: BaseWrapper):
+    def on_after_bind(self, bound_name: str, wrapper: BaseWrapper[Any]):
         self._lazy_container.apply(wrapper._container, bound_name)
 
 class MutuallyExclusiveGroupWrapperOptions(TypedDict, total=False):
     required: bool
     "Whether the mutually exclusive group is required, default is False"
 
-class MutuallyExclusiveGroupWrapper(SubgroupWrapper[_NS]):
+class MutuallyExclusiveGroupWrapper[_NS](SubgroupWrapper[_NS]):
 
     def __init__(
         self,
@@ -240,5 +239,5 @@ class MutuallyExclusiveGroupWrapper(SubgroupWrapper[_NS]):
     def configure_container(self) -> LazyContainer:
         return self._lazy_container
 
-    def on_after_bind(self, bound_name: str, wrapper: BaseWrapper):
+    def on_after_bind(self, bound_name: str, wrapper: BaseWrapper[Any]):
         self._lazy_container.apply(wrapper._container, bound_name)

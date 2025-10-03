@@ -2,14 +2,13 @@
 
 import pytest
 import argparse
-from unittest.mock import Mock, patch, MagicMock
-from typing import Any
+from unittest.mock import Mock, patch
 
 from clipar.v312.basewrapper import (
     BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper,
     NotSelected, NotSelectedType,
-    _return_bool, _append_list,
-    ArgumentContainerProtocol, SupportsOriginAndArgs
+    _return_bool, _append_list, # pyright: ignore[reportPrivateUsage]
+    ArgumentContainerProtocol, GenericAliasLike
 )
 
 
@@ -178,7 +177,7 @@ class TestBaseWrapper:
             
             wrapper = ConcreteWrapper(MockNamespace)
             literal_type = Literal['test']
-            assert isinstance(literal_type, SupportsOriginAndArgs)
+            assert isinstance(literal_type, GenericAliasLike)
             result = wrapper._flatten_union_and_literal((str, int, literal_type))
             assert str in result
             assert int in result
@@ -552,17 +551,17 @@ class TestArgumentContainerProtocol:
         assert isinstance(parser, ArgumentContainerProtocol)
 
 
-class TestSupportsOriginAndArgs:
-    """Test SupportsOriginAndArgs protocol"""
+class TestGenericAliasLike:
+    """Test GenericAliasLike protocol"""
     
     def test_protocol_compliance(self):
         """Test that generic types implement the protocol"""
         from typing import List
         
-        # List[str] should implement SupportsOriginAndArgs
+        # List[str] should implement GenericAliasLike
         list_str = List[str]
         if hasattr(list_str, '__origin__') and hasattr(list_str, '__args__'):
-            assert isinstance(list_str, SupportsOriginAndArgs)
+            assert isinstance(list_str, GenericAliasLike)
 
 
 if __name__ == "__main__":
