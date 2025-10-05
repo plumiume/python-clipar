@@ -26,6 +26,13 @@ def _append_list[T](target: list[T], *args: T) -> list[T]:
     target.extend(args)
     return target
 
+def _get_attr_names(cls: type) -> Iterable[str]:
+    for base in reversed(cls.mro()):
+        if hasattr(base, '__slots__'):
+            yield from getattr(base, '__slots__')
+        if hasattr(base, '__dict__'):
+            yield from getattr(base, '__dict__')
+
 class _NotSelectedType:
     def __bool__(self) -> Literal[False]:
         return False
@@ -148,52 +155,68 @@ class BaseWrapper[NS](abc.ABC):
         ):
 
         # dependencies: attr order, attr doc
-        assign_infos = ClassAstHolder(namespace_type).get_assign_infos()
+        try:
+            assign_infos = ClassAstHolder(namespace_type).get_assign_infos()
+        except (OSError, TypeError, SyntaxError, RuntimeError):
+            assign_infos = {}
 
         annotations = get_type_hints(namespace_type)
-        attributes = set(dir(namespace_type)) - OBJECT_ATTRS
+        attrnames = list(_get_attr_names(namespace_type))
 
-        for assign_name, assign_info in assign_infos.items():
+        ordered_attrnames = [
+            *(
+                a for a in annotations
+                if a not in attrnames
+            ),
+            *(
+                a for a in attrnames
+                if not a in OBJECT_ATTRS and not a.startswith('_')
+            )
+        ]
 
-            in_annotations = assign_name in annotations
-            in_dict = assign_name in attributes
-            default: Any | None = getattr(namespace_type, assign_name, None)
+        for attr_key in ordered_attrnames:
+
+            in_annotations = attr_key in annotations
+            in_dict = attr_key in attrnames
+            default: Any | None = getattr(namespace_type, attr_key, None)
+            var_info = assign_infos.get(attr_key, None)
+            doc = var_info.doc if var_info else None
 
             if isinstance(default, type):
                 raise TypeError(
-                    f"Assign name '{assign_name}' cannot be a type, "
+                    f"Assign name '{attr_key}' cannot be a type, "
                     f"it must be an instance or a default value."
                 )
 
             elif in_dict and isinstance(default, SubparserWrapper | SubgroupWrapper):
                 self._add_wrapper(
                     container=container,
-                    name=assign_name,
+                    name=attr_key,
                     wrapper=default # pyright: ignore[reportUnknownArgumentType]
                 )
 
             elif in_dict:
-                self._arg_names.add(assign_name)
+                self._arg_names.add(attr_key)
                 self._add_opt(
                     container=container,
-                    name=assign_name,
-                    annotation=annotations.get(assign_name, type(default)),
+                    name=attr_key,
+                    annotation=annotations.get(attr_key, type(default)),
                     default=default,
-                    doc=assign_info.doc,
+                    doc=doc,
                 )
 
             elif in_annotations:
-                self._arg_names.add(assign_name)
+                self._arg_names.add(attr_key)
                 self._add_req(
                     container=container,
-                    name=assign_name,
-                    annotation=annotations[assign_name],
-                    doc=assign_info.doc,
+                    name=attr_key,
+                    annotation=annotations[attr_key],
+                    doc=doc,
                 )
 
             else: # Never
                 raise ValueError(
-                    f"Assign name '{assign_name}' not found in annotations or dict."
+                    f"Assign name '{attr_key}' not found in annotations or dict."
                 )
 
     def _add_wrapper(
@@ -587,5 +610,3 @@ class BoundWrapper[W: BaseWrapper[Any]](WrapperHolder[W]):
     @property
     def self(self_) -> W:
         return self_._self
-
-

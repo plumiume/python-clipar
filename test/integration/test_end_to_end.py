@@ -877,18 +877,6 @@ class TestNestedDecorators:
             log_format = LogFormat
             enable_metrics: bool = False
 
-
-        with pytest.raises(SystemExit):
-            config = ComplexConfig.parse_args([
-                "--timeout", "60",
-                "--retries", "5",
-                "InheritanceApp",
-                "--host", "prod.db.com",
-                "--port", "3306",
-                "--json",
-                "--enable-metrics"
-            ])
-
         config = ComplexConfig.parse_args([
             "InheritanceApp",
             "--host", "prod.db.com",
@@ -1383,4 +1371,3 @@ class TestFieldAliasingAndConflicts:
                 # Group inner class aliasing - should cause conflicts
                 inner_group_ref = inner_group
                 inner_group_alias = inner_group  # This causes conflict
-

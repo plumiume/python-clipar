@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 from clipar.v312.basewrapper import (
     BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper,
     NotSelected, NotSelectedType,
-    _return_bool, _append_list, # pyright: ignore[reportPrivateUsage]
+    _return_bool, _append_list, _get_attr_names, # pyright: ignore[reportPrivateUsage]
     ArgumentContainerProtocol, GenericAliasLike,
     OBJECT_ATTRS, Literalizable
 )
@@ -28,6 +28,87 @@ class TestUtilityFunctions:
         result = _append_list(target, 3, 4)
         assert result == [1, 2, 3, 4]
         assert target == [1, 2, 3, 4]  # Original list is modified
+
+    def test_get_attr_names_simple_class(self):
+        """Test _get_attr_names with a simple class"""
+        class SimpleClass:
+            x: int = 10
+            y: str = "test"
+
+        attr_names = list(_get_attr_names(SimpleClass))
+        assert 'x' in attr_names
+        assert 'y' in attr_names
+
+    def test_get_attr_names_inherited_class(self):
+        """Test _get_attr_names with inherited classes"""
+        class BaseClass:
+            base_attr: str = "base"
+
+        class DerivedClass(BaseClass):
+            derived_attr: int = 42
+
+        attr_names = list(_get_attr_names(DerivedClass))
+        assert 'base_attr' in attr_names
+        assert 'derived_attr' in attr_names
+
+    def test_get_attr_names_with_slots(self):
+        """Test _get_attr_names with __slots__"""
+        class SlottedClass:
+            __slots__ = ('x', 'y')
+
+        attr_names = list(_get_attr_names(SlottedClass))
+        assert 'x' in attr_names
+        assert 'y' in attr_names
+
+    def test_get_attr_names_mixed_inheritance(self):
+        """Test _get_attr_names with mixed inheritance (slots and dict)"""
+        class SlottedBase:
+            __slots__ = ('slot_attr',)
+
+        class DictDerived(SlottedBase):
+            dict_attr: str = "test"
+
+        attr_names = list(_get_attr_names(DictDerived))
+        assert 'slot_attr' in attr_names
+        assert 'dict_attr' in attr_names
+
+    def test_get_attr_names_complex_inheritance_chain(self):
+        """Test complex inheritance chain attribute resolution"""
+        
+        class GrandParent:
+            grand_attr: str = "grand"
+
+        class Parent(GrandParent):
+            parent_attr: int = 20
+
+        class Child(Parent):
+            child_attr: bool = True
+
+        attr_names = list(_get_attr_names(Child))
+        
+        # All attributes from inheritance chain should be present
+        assert 'grand_attr' in attr_names
+        assert 'parent_attr' in attr_names
+        assert 'child_attr' in attr_names
+
+    def test_get_attr_names_multiple_inheritance(self):
+        """Test that method resolution order is preserved in _get_attr_names"""
+        
+        class A:
+            a_attr: str = "A"
+
+        class B:
+            b_attr: str = "B"
+
+        class C(A, B):
+            c_attr: str = "C"
+
+        attr_names = list(_get_attr_names(C))
+        
+        # All attributes should be present regardless of MRO complexity
+        assert 'a_attr' in attr_names
+        assert 'b_attr' in attr_names
+        assert 'c_attr' in attr_names
 
 
 class TestNotSelectedType:
@@ -597,6 +678,83 @@ class TestGenericAliasLike:
         list_str = List[str]
         if hasattr(list_str, '__origin__') and hasattr(list_str, '__args__'):
             assert isinstance(list_str, GenericAliasLike)
+
+
+class TestInheritanceFeatures:
+    """Test new inheritance functionality in BaseWrapper"""
+
+    def test_wrapper_creation_with_inherited_class(self):
+        """Test that BaseWrapper can be created with an inherited class"""
+        
+        class BaseConfig:
+            base_option: str = "default_base"
+            base_flag: bool = False
+
+        class DerivedConfig(BaseConfig):
+            derived_option: int = 10
+            derived_required: str  # No default, should be required
+
+        class TestWrapper(BaseWrapper[DerivedConfig]):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+
+        # Mock ClassAstHolder to avoid dependency issues  
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            # Should not raise an exception
+            wrapper = TestWrapper(DerivedConfig)
+            assert wrapper is not None
+            assert wrapper.namespace_type == DerivedConfig
+
+    def test_exception_handling_during_initialization(self):
+        """Test that ClassAstHolder exceptions are properly handled"""
+        
+        # Create a class that will cause ClassAstHolder to fail
+        DynamicClass = type('DynamicClass', (), {
+            'attr': 'value',
+            '__annotations__': {'required_attr': str}
+        })
+
+        class TestWrapper(BaseWrapper[object]):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+
+        # Mock ClassAstHolder to raise an exception
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.side_effect = OSError("Cannot get source")
+            
+            # This should not raise an exception even if ClassAstHolder fails
+            wrapper = TestWrapper(DynamicClass)
+            assert wrapper is not None
+
+    def test_init_container_with_inherited_attributes(self):
+        """Test _init_container handles inherited attributes correctly"""
+        
+        class BaseConfig:
+            base_option: str = "default_base"
+            base_flag: bool = False
+
+        class DerivedConfig(BaseConfig):
+            derived_option: int = 10
+            derived_required: str  # No default, should be required
+
+        class TestWrapper(BaseWrapper[DerivedConfig]):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+
+        # Mock ClassAstHolder and _get_attr_names for controlled testing
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast, \
+             patch('clipar.v312.basewrapper._get_attr_names') as mock_get_attrs:
+            
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            mock_get_attrs.return_value = ['base_option', 'base_flag', 'derived_option', 'derived_required']
+            
+            wrapper = TestWrapper(DerivedConfig)
+            
+            # Verify that the wrapper was created successfully
+            assert wrapper is not None
+            assert wrapper.namespace_type == DerivedConfig
 
 
 if __name__ == "__main__":
