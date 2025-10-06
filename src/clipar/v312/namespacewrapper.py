@@ -240,6 +240,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         ):
 
         for sg_name, sg_holder in subgroups.items():
+
             child_wrapper = sg_holder.self
             child_namespace = child_wrapper.namespace_type()
             setattr(target_namespace, sg_name, child_namespace)
@@ -268,12 +269,6 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         leaf_namespace: object,
         location: list[str],
         ) -> NS:
-
-        # [----bind_by----]
-        # [leaf, ..., root]
-        #       [..., root]
-        #            [root]
-        # begin = -bound[0].length to -1
 
         current_namespace = leaf_namespace
 

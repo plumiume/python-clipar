@@ -7,6 +7,38 @@ import ast
 _CLS = TypeVar('_CLS')
 
 class ClassAstHolder(Generic[_CLS]):
+    """
+    A class for analyzing Python class Abstract Syntax Trees (AST) to extract variable definitions and their documentation.
+    
+    This class uses Python's inspect and ast modules to parse class source code and associate
+    variable assignments with subsequent string literals as documentation.
+    
+    Type Parameters:
+        _CLS: The type of the class being analyzed
+    
+    Attributes:
+        cls: The class being analyzed
+        classdef: The AST ClassDef node of the class
+    
+    Raises:
+        OSError: If the source code of the class cannot be retrieved (e.g., built-in classes,
+                classes defined in C extensions, or classes in interactive sessions).
+        TypeError: If the class object is not a valid type that can have source code retrieved.
+        SyntaxError: If the retrieved source code contains syntax errors that prevent AST parsing.
+        RuntimeError: If no class definition is found in the parsed code, if the parsed code
+                     does not contain a class definition, or if any other unexpected error occurs
+                     during source code retrieval or AST parsing.
+    
+    Example:
+        >>> class SampleClass:
+        ...     x: int
+        ...     "x variable documentation"
+        ...     y = 10
+        ...     "y variable documentation"
+        >>> holder = ClassAstHolder(SampleClass)
+        >>> holder.get_assign_docs()
+        {'x': 'x variable documentation', 'y': 'y variable documentation'}
+    """
 
     def _get_class_code(self, cls: type) -> str:
 

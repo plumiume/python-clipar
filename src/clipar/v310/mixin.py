@@ -1,6 +1,3 @@
-from typing import Iterable
-from types import MethodType
-
 def _is_dunder(name: str) -> bool:
     return name.startswith('__') and name.endswith('__') and len(name) > 4
 
