@@ -1,13 +1,14 @@
 from typing import overload, Final, TypeVar
-from typing_extensions import Unpack, Self
-
-_NS = TypeVar('_NS')
+from typing_extensions import Self, Unpack
 
 from .namespacewrapper import NamespaceWrapper, ArgumentParserOptions as NamespaceOptions
 from .groupwrapper import (
     GroupWrapper, GroupWrapperOptions as GroupOptions,
     MutuallyExclusiveGroupWrapper, MutuallyExclusiveGroupWrapperOptions as MutuallyExclusiveGroupWrapperOptions
 )
+
+# TypeVar definitions for Python 3.10 compatibility
+_NS = TypeVar('_NS')
 
 class NamespaceWithOptions:
 

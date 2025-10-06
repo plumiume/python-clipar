@@ -1,19 +1,29 @@
+import sys
 from typing import (
     Any,
-    Sequence,
+    Iterable, Sequence,
     Callable,
     TypedDict,
-    TypeVar
+    TypeVar, Generic,
 )
+import argparse
 from argparse import (
     _SubParsersAction, # pyright: ignore[reportPrivateUsage]
 )
-import argparse
 import argcomplete
-from .basewrapper import BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper
+from .basewrapper import (
+    OnParseHookArgs, Location,
+    BaseWrapper, SubparserWrapper, SubgroupWrapper,
+    BoundWrapper
+)
 
+# TypeVar definitions for Python 3.10 compatibility
 _NS = TypeVar('_NS')
 _R = TypeVar('_R')
+
+# Type alias for Python 3.10 compatibility
+ParentSubparserId = int
+
 
 class ArgumentParserOptions(TypedDict, total=False):
     prog: str | None
@@ -45,6 +55,11 @@ class ArgumentParserOptions(TypedDict, total=False):
     "Whether to allow abbreviations of long options (default: True)"
     exit_on_error: bool
     "Whether to exit on error (default: True)"
+    if sys.version_info >= (3, 14): # pyright: ignore[reportGeneralTypeIssues]
+        suggest_on_error: bool
+        "Whether to suggest similar options on error (default: False)"
+        color: bool
+        "Whether to use color in the help output (default: False)"
 
 class SubParserOptions(TypedDict, total=False):
     title: str
@@ -104,7 +119,7 @@ class TrackableSubParsersAction(_SubParsersAction): # pyright: ignore[reportMiss
         else:
             command_chain.append(parser_name)
 
-class NamespaceWrapper(SubparserWrapper[_NS]):
+class NamespaceWrapper(SubparserWrapper[_NS], Generic[_NS]):
 
     def __init__(
         self,
@@ -149,165 +164,79 @@ class NamespaceWrapper(SubparserWrapper[_NS]):
                 add_help=False,
             )
 
-    def _before_parse(self):
+    def _before_parse(self) -> Iterable[OnParseHookArgs]:
 
         self.on_before_parse([], None)
 
-        flatten_subparsers = self._flatten_subparsers()
+        stack: list[OnParseHookArgs] = [
+            *(([name], holder) for name, holder in self._subgroups.items()),
+            *(([name], holder) for name, holder in self._subparsers.items())
+        ]
 
-        for bound_names, bound_wrapper in flatten_subparsers:
-            bound_wrapper.self.on_before_parse(bound_names, bound_wrapper)
+        while stack:
 
-            flatten_subgroups = bound_wrapper.self._flatten_subgroups()
+            item = stack.pop()
+            yield item
+            location, holder = item
 
-            for subgroup_names, subgroup_wrapper in flatten_subgroups:
-                new_names = subgroup_names + bound_names
-                subgroup_wrapper.self.on_before_parse(new_names, subgroup_wrapper)
+            holder.self.on_before_parse(location, holder)
 
-        flatten_subgroups = self._flatten_subgroups()
-        for subgroup_names, subgroup_wrapper in flatten_subgroups:
-            subgroup_wrapper.self.on_before_parse(subgroup_names, subgroup_wrapper)
+            stack.extend(
+                (location + [name], holder)
+                for name, holder in holder.self._subgroups.items()
+            )
+
+            stack.extend(
+                (location + [name], holder)
+                for name, holder in holder.self._subparsers.items()
+            )
 
         argcomplete.autocomplete(self._parser)
 
-        return flatten_subparsers
+    def _after_parse(self, namespace: argparse.Namespace, flattens: Iterable[OnParseHookArgs]) -> _NS:
 
-    def _after_parse(
-        self,
-        argparse_namespace: argparse.Namespace,
-        flatten_subparsers: list[tuple[list[str], BoundWrapper[Any]]],
-        ) -> _NS:
+        # leaf_wrapper: SubparserWrapper[Any] = getattr(namespace, '_clipar_wrapper')
+        command_chain: list[str] = list(reversed(
+            getattr(namespace, '_clipar_command_chain', [])
+        )) # leaf to root
 
-        leaf_wrapper: SubparserWrapper[Any] = getattr(argparse_namespace, '_clipar_wrapper')
-        leaf_name: str | None = getattr(argparse_namespace, '_clipar_leaf_name', None)
+        ret_ns = self.namespace_type()
 
-        bound_names = []
+        namespace_table: dict[BaseWrapper[Any], tuple[
+            Location, BoundWrapper[BaseWrapper[Any]] | None, object, set[str]
+        ]] = {
+            self: ([], None, ret_ns, self._arg_names)
+        }
 
-        if self is not leaf_wrapper:
-            
-            for bound_names, bound_wrapper in flatten_subparsers:
-                if (
-                    bound_names
-                    and bound_names[0] == leaf_name
-                    and bound_wrapper.self is leaf_wrapper
-                    ):
-                    break
+        for location, holder in flattens:
 
-            if not bound_names:
-                raise ValueError(
-                    f"Leaf wrapper not found in the flattened subparsers."
-                    f" ( flatten_subparsers: {flatten_subparsers} )"
-                )
+            if holder.parent not in namespace_table:
+                continue
 
-        leaf_namespace = leaf_wrapper.namespace_type()
+            if isinstance(holder.self, SubparserWrapper):
 
-        self._set_subgroup_namespace(
-            leaf_wrapper._subgroups,
-            argparse_namespace,
-            leaf_namespace,
-            bound_names,
-        )
+                if location != command_chain[:len(location)]:
+                    continue
 
-        self._set_args(
-            leaf_wrapper,
-            argparse_namespace,
-            leaf_namespace,
-        )
+            tmp_ns = holder.self.namespace_type()
+            namespace_table[holder.self] = (location, holder, tmp_ns, holder.self._arg_names)
 
-        result_namespace = self._set_subparser_namespace(
-            flatten_subparsers,
-            argparse_namespace,
-            leaf_namespace,
-            bound_names,
-        )
+            _, _, parent_ns, _ = namespace_table[holder.parent]
+            setattr(parent_ns, holder.bound_name, tmp_ns)
 
-        leaf_wrapper._exec_callback(leaf_namespace)
+        for location, holder, tmp_ns, attrs in reversed(namespace_table.values()):
 
-        return result_namespace
+            for a in attrs:
+                setattr(tmp_ns, a, getattr(namespace, a))
 
-    def _set_args(
-        self,
-        wrapper: BaseWrapper[Any],
-        argparse_namespace: argparse.Namespace,
-        target_namespace: object,
-        ):
+            if holder is None:
+                self.on_after_parse(location, None)
+            else:
+                holder.self.on_after_parse(location, holder)
 
-        for attr_name in wrapper._arg_names:
-            attr_value = getattr(argparse_namespace, attr_name)
-            setattr(target_namespace, attr_name, attr_value)
+        return ret_ns
 
-    def _set_subgroup_namespace(
-        self,
-        subgroups: 'dict[str, BoundWrapper[Any]]',
-        argparse_namespace: argparse.Namespace,
-        target_namespace: object,
-        names: list[str],
-        ):
-
-        for bound_name, bound_wrapper in subgroups.items():
-            child_wrapper = bound_wrapper.self
-            child_namespace = child_wrapper.namespace_type()
-            setattr(target_namespace, bound_name, child_namespace)
-
-            new_names = names + [bound_name]
-
-            self._set_subgroup_namespace(
-                child_wrapper._subgroups,
-                argparse_namespace,
-                names=new_names,
-                target_namespace=child_namespace,
-            )
-
-            self._set_args(
-                child_wrapper,
-                argparse_namespace,
-                child_namespace,
-            )
-
-            bound_wrapper.self.on_after_parse(new_names, bound_wrapper)
-
-    def _set_subparser_namespace(
-        self,
-        flatten_subparsers: list[tuple[list[str], BoundWrapper[SubparserWrapper[Any]]]],
-        argparse_namespace: argparse.Namespace,
-        leaf_namespace: object,
-        names: list[str],
-        ) -> _NS:
-
-        # [----bind_by----]
-        # [leaf, ..., root]
-        #       [..., root]
-        #            [root]
-        # begin = -bound[0].length to -1
-
-        current_namespace = leaf_namespace
-
-        for begin in range(-len(names), 0):
-
-            for bound_names, bound_wrapper in flatten_subparsers:
-
-                if bound_names == names[begin:]:
-
-                    parent_namespace = bound_wrapper.parent.namespace_type()
-
-                    setattr(parent_namespace, bound_wrapper.bound_name, current_namespace)
-                    self._set_args(
-                        bound_wrapper.parent,
-                        argparse_namespace,
-                        parent_namespace,
-                    )
-
-                    bound_wrapper.self.on_after_parse(bound_names, bound_wrapper)
-                    current_namespace = parent_namespace
-
-        if isinstance(current_namespace, self.namespace_type):
-            return current_namespace
-
-        raise ValueError(
-            f"Current namespace {current_namespace} is not an instance of the expected "
-            f"namespace type {self.namespace_type}."
-        )
-
+    ## Public API
 
     def parse_args(self, args: list[str] | None = None) -> _NS:
         """
@@ -352,9 +281,9 @@ class NamespaceWrapper(SubparserWrapper[_NS]):
             # config.verbose == True
             ```
         """
-        flatten_subparsers = self._before_parse()
+        flattens = self._before_parse()
         namespace = self._parser.parse_args(args)
-        return self._after_parse(namespace, flatten_subparsers)
+        return self._after_parse(namespace, flattens)
 
     def parse_known_args(self, args: list[str] | None = None) -> tuple[_NS, list[str]]:
         """
@@ -396,12 +325,9 @@ class NamespaceWrapper(SubparserWrapper[_NS]):
             # unknown == ['--unknown-flag', 'extra']
             ```
         """
-        flatten_subparsers = self._before_parse()
+        flattens = self._before_parse()
         namespace, unknown_args = self._parser.parse_known_args(args)
-        return (
-            self._after_parse(namespace, flatten_subparsers),
-            unknown_args
-        )
+        return (self._after_parse(namespace, flattens), unknown_args)
 
     def parse_intermixed_args(self, args: list[str] | None = None) -> _NS:
         """
@@ -447,9 +373,9 @@ class NamespaceWrapper(SubparserWrapper[_NS]):
             # config.files == ['file1.txt', 'file2.txt']
             ```
         """
-        flatten_subparsers = self._before_parse()
+        flattens = self._before_parse()
         namespace = self._parser.parse_intermixed_args(args)
-        return self._after_parse(namespace, flatten_subparsers)
+        return self._after_parse(namespace, flattens)
 
 
     def parse_known_intermixed_args(self, args: list[str] | None = None) -> tuple[_NS, list[str]]:
@@ -492,12 +418,9 @@ class NamespaceWrapper(SubparserWrapper[_NS]):
             # unknown == ['--unknown', 'value', 'extra']
             ```
         """
-        flatten_subparsers = self._before_parse()
+        flattens = self._before_parse()
         namespace, unknown_args = self._parser.parse_known_intermixed_args(args)
-        return (
-            self._after_parse(namespace, flatten_subparsers),
-            unknown_args
-        )
+        return (self._after_parse(namespace, flattens), unknown_args)
 
     def callback(
         self,

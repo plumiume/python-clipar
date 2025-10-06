@@ -1,8 +1,9 @@
-from typing import Any, TypedDict, TypeVar
-from typing_extensions import Unpack
+from typing import TypedDict, Any, TypeVar, Generic
+from typing_extensions import Self, Unpack
 
 from .basewrapper import BaseWrapper, AddArgumentOptions, ArgumentContainerProtocol, SubgroupWrapper
 
+# TypeVar definitions for Python 3.10 compatibility
 _NS = TypeVar('_NS')
 
 class LazyContainer(ArgumentContainerProtocol):
@@ -51,7 +52,7 @@ class LazyContainer(ArgumentContainerProtocol):
         *,
         prefix_chars: str = '-',
         conflict_handler: str = 'error'
-        ) -> 'LazyContainer':
+        ) -> Self:
         return cls(cls._ArgumentGroup(
             title=title,
             description=description,
@@ -64,7 +65,7 @@ class LazyContainer(ArgumentContainerProtocol):
         cls,
         *,
         required: bool = False
-        ) -> 'LazyContainer':
+        ) -> Self:
         return cls(cls._MutuallyExclusiveGroup(
             required=required
         ))
@@ -139,6 +140,7 @@ class LazyContainer(ArgumentContainerProtocol):
         supports_ameg_group = None
 
         if isinstance(self.options, self._ArgumentGroup):
+            # maybe: DeprecationWarning: Nesting argument groups is deprecated.
             supports_aa_group = supports_add_argument_group.add_argument_group(
                 title=(
                     self.options.title
@@ -195,7 +197,7 @@ class GroupWrapperOptions(TypedDict, total=False):
     conflict_handler: str
     "Conflict handler for the argument group, default is 'error'"
 
-class GroupWrapper(SubgroupWrapper[_NS]):
+class GroupWrapper(SubgroupWrapper[_NS], Generic[_NS]):
 
     def __init__(
         self,
@@ -224,7 +226,7 @@ class MutuallyExclusiveGroupWrapperOptions(TypedDict, total=False):
     required: bool
     "Whether the mutually exclusive group is required, default is False"
 
-class MutuallyExclusiveGroupWrapper(SubgroupWrapper[_NS]):
+class MutuallyExclusiveGroupWrapper(SubgroupWrapper[_NS], Generic[_NS]):
 
     def __init__(
         self,

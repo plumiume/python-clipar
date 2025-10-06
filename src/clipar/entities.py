@@ -10,3 +10,9 @@ elif sys.version_info >= (3, 10):
     from .v310.groupwrapper import GroupWrapper
 else:
     raise ImportError("clipar requires Python 3.10 or later")
+
+__all__ = [
+    "BaseWrapper",
+    "NamespaceWrapper",
+    "GroupWrapper",
+]

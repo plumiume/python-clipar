@@ -1,7 +1,10 @@
-"""Unit tests for clipar.v312.mixin module"""
+"""Unit tests for clipar.v310.mixin module"""
+
+# pyright: reportPrivateUsage=false
 
 import pytest
-from clipar.v312.mixin import _is_dunder, ReprMixin
+from typing import Any
+from clipar.v310.mixin import _is_dunder, ReprMixin
 
 
 class TestIsDunderFunction:
@@ -172,13 +175,17 @@ class TestReprMixin:
 
     def test_repr_with_complex_attribute_values(self):
         """Test __repr__ with complex attribute values"""
+
+        def callable_attr(x: int) -> int:
+            return x + 1
+
         class TestClass(ReprMixin):
             def __init__(self):
                 self.string_attr = "test string"
                 self.list_attr = [1, 2, 3]
                 self.dict_attr = {"key": "value"}
                 self.none_attr = None
-                self.callable_attr = lambda x: x + 1
+                self.callable_attr = callable_attr
         
         obj = TestClass()
         repr_str = repr(obj)
@@ -230,7 +237,7 @@ class TestReprMixin:
     def test_repr_with_descriptor_attributes(self):
         """Test __repr__ with descriptor attributes"""
         class TestDescriptor:
-            def __get__(self, obj, objtype=None):
+            def __get__(self, obj: Any, objtype: Any = None):
                 return "descriptor_value"
         
         class TestClass(ReprMixin):

@@ -4,12 +4,11 @@ from typing import (
     overload, Protocol, runtime_checkable, Any,
     Callable, Literal, Union,
     Iterable, Sequence,
-    TypedDict,
-    TypeGuard, Final,
-    TypeVar, Generic,
+    TypedDict, TypeGuard, Final,
     get_type_hints, get_args, get_origin,
+    TypeVar, Generic,
 )
-from typing_extensions import Unpack, Self
+from typing_extensions import Self, Unpack
 from types import UnionType, EllipsisType, NoneType
 from enum import Enum
 
@@ -18,11 +17,15 @@ import argparse
 
 from .class_ast import ClassAstHolder
 
+# TypeVar definitions for Python 3.10 compatibility
+_NS = TypeVar('_NS')
+_T = TypeVar('_T')
+_W = TypeVar('_W', bound='BaseWrapper[Any]', covariant=True)
+
+Location = list[str]
+OnParseHookArgs = tuple[Location, 'BoundWrapper[BaseWrapper[Any]]']
 Literalizable = str | int | float | bool | NoneType
 OBJECT_ATTRS = set(dir(object))
-
-_T = TypeVar('_T')
-_NS = TypeVar('_NS')
 
 def _return_bool(value: bool) -> bool:
     return value
@@ -66,8 +69,8 @@ class AddArgumentOptions(TypedDict, total=False):
     nargs: int | Literal['?', '*', '+'] | None
     const: object
     default: object
-    type: Callable[[str], Any] | argparse.FileType | str
-    choices: Iterable[Any] | None
+    type: Callable[[str], object] | argparse.FileType | str
+    choices: Iterable[object] | None
     required: bool
     help: str | None
     metavar: str | tuple[str, ...] | None
@@ -102,7 +105,7 @@ class GenericAliasLike(Protocol):
     __args__: tuple['GenericAliasLike | type | None', ...] | tuple[Any, EllipsisType]
     __origin__: Any
 
-class BaseWrapper(Generic[_NS], abc.ABC):
+class BaseWrapper(abc.ABC, Generic[_NS]):
 
     def __init__(self, namespace_type: type[_NS]):
         self.namespace_type = namespace_type
@@ -197,7 +200,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
                 self._add_wrapper(
                     container=container,
                     name=attr_key,
-                    wrapper=default  # type: ignore[arg-type]
+                    wrapper=default # pyright: ignore[reportUnknownArgumentType]
                 )
 
             elif in_dict:
@@ -233,12 +236,10 @@ class BaseWrapper(Generic[_NS], abc.ABC):
 
         wrapper.on_before_bind(name, self)
 
-        bound_wrapper = wrapper._bind(name, self)
-
         if isinstance(wrapper, SubparserWrapper):
-            self._subparsers[name] = bound_wrapper  # type: ignore[assignment]
+            self._subparsers[name] = wrapper._bind(name, self)
         elif isinstance(wrapper, SubgroupWrapper):
-            self._subgroups[name] = bound_wrapper  # type: ignore[assignment]
+            self._subgroups[name] = wrapper._bind(name, self)
         else:
             raise TypeError(
                 f"Wrapper must be either SubparserWrapper or SubgroupWrapper, "
@@ -256,7 +257,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
         self,
         container: ArgumentContainerProtocol,
         name: str,
-        annotation: type | GenericAliasLike,
+        annotation: type | UnionType | GenericAliasLike,
         doc: str | None
         ):
 
@@ -272,7 +273,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
         self,
         container: ArgumentContainerProtocol,
         name: str,
-        annotation: type | GenericAliasLike,
+        annotation: GenericAliasLike | type,
         default: object,
         doc: str | None
         ):
@@ -288,7 +289,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
         else:
             action = 'store'
 
-        container.add_argument(
+        action = container.add_argument(
             name_or_flag,
             action=action,
             help=doc,
@@ -409,9 +410,8 @@ class BaseWrapper(Generic[_NS], abc.ABC):
         }
 
         for ann in literal_args:
-            if not isinstance(ann, Literalizable):
-                continue
-            ret.setdefault(type(ann), []).append(ann)
+            if isinstance(ann, Literalizable):
+                ret.setdefault(type(ann), []).append(ann)
 
         return ret
 
@@ -455,7 +455,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
 
     def _get_type_from_type_or_generic_alias(
         self,
-        annotation: type | GenericAliasLike
+        annotation: GenericAliasLike | type
         ) -> type:
 
         tmp = annotation
@@ -467,7 +467,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
             )
         return tmp
 
-    def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper[Any]']]:
+    def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper[SubparserWrapper[Any]]']]:
 
         return list(chain.from_iterable(
             chain(
@@ -483,7 +483,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
             for name, bound_wrapper in self._subparsers.items()
         ))
 
-    def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper[Any]']]:
+    def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper[SubgroupWrapper[Any]]']]:
 
         return list(chain.from_iterable(
             chain(
@@ -509,9 +509,9 @@ class BaseWrapper(Generic[_NS], abc.ABC):
     def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper[Any]'):
         pass
 
-    def on_before_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[Any] | None'):
+    def on_before_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
-    def on_after_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[Any] | None'):
+    def on_after_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
 
     ## Public API
@@ -520,7 +520,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
         self,
         name: str,
         wrapper: 'SubparserWrapper[Any] | SubgroupWrapper[Any]'
-        ) -> None:
+        ):
 
         """
         Dynamically add a wrapper to create nested command structures.
@@ -566,7 +566,7 @@ class BaseWrapper(Generic[_NS], abc.ABC):
 
         self._add_wrapper(self._container, name, wrapper)
 
-class SubparserWrapper(BaseWrapper[_NS], abc.ABC):
+class SubparserWrapper(BaseWrapper[_NS], abc.ABC, Generic[_NS]):
     def __init__(
         self,
         namespace_type: type[_NS]
@@ -595,16 +595,14 @@ class SubparserWrapper(BaseWrapper[_NS], abc.ABC):
         if self._check_namespace(namespace):
             return self._callback(namespace)
 
-class SubgroupWrapper(BaseWrapper[_NS], abc.ABC):
+class SubgroupWrapper(BaseWrapper[_NS], abc.ABC, Generic[_NS]):
     pass
-
-_W = TypeVar('_W', bound='BaseWrapper[Any]')
 
 class WrapperHolder(Generic[_W]): pass
 
-class BoundWrapper(WrapperHolder[_W]):
+class BoundWrapper(WrapperHolder[_W], Generic[_W]):
 
-    def __init__(self, name: str, parent_wrapper: 'BaseWrapper[Any]', self_wrapper: _W):
+    def __init__(self, name: str, parent_wrapper: BaseWrapper[Any], self_wrapper: _W):
         self._bound_name = name
         self._parent = parent_wrapper
         self._self = self_wrapper
@@ -614,7 +612,7 @@ class BoundWrapper(WrapperHolder[_W]):
         return self._bound_name
 
     @property
-    def parent(self) -> 'BaseWrapper[Any]':
+    def parent(self) -> BaseWrapper[Any]:
         return self._parent
 
     @property

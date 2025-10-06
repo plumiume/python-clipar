@@ -1,5 +1,7 @@
 """Unit tests for basewrapper.py"""
 
+# pyright: reportPrivateUsage=false
+
 import pytest
 import argparse
 from unittest.mock import Mock, patch
@@ -9,7 +11,7 @@ from clipar.v312.basewrapper import (
     NotSelected, NotSelectedType,
     _return_bool, _append_list, _get_attr_names, # pyright: ignore[reportPrivateUsage]
     ArgumentContainerProtocol, GenericAliasLike,
-    OBJECT_ATTRS, Literalizable
+    OBJECT_ATTRS
 )
 from types import UnionType
 
@@ -135,7 +137,7 @@ class TestConstants:
     def test_literalizable_type(self):
         """Test that Literalizable type covers expected types"""
         # Test that various literal values are of Literalizable type
-        test_values = ["string", 42, 3.14, True, False, None]
+        test_values: list[str | int | float | bool | None] = ["string", 42, 3.14, True, False, None]
         for value in test_values:
             # This is a runtime check since we can't directly check type alias
             assert isinstance(value, (str, int, float, bool, type(None)))
@@ -169,7 +171,7 @@ class TestBaseWrapper:
     def test_init(self):
         """Test BaseWrapper initialization (via concrete subclass)"""
         # Create a concrete implementation for testing
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -185,7 +187,7 @@ class TestBaseWrapper:
     
     def test_namespace_type_property(self):
         """Test namespace_type property"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -197,7 +199,7 @@ class TestBaseWrapper:
     
     def test_get_descriptor_with_none_instance(self):
         """Test __get__ method with None instance"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -210,7 +212,7 @@ class TestBaseWrapper:
     
     def test_get_descriptor_with_type_instance(self):
         """Test __get__ method with type instance"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -223,7 +225,7 @@ class TestBaseWrapper:
     
     def test_get_descriptor_with_object_instance(self):
         """Test __get__ method with object instance"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -237,7 +239,7 @@ class TestBaseWrapper:
     
     def test_update_container(self):
         """Test update_container method"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -251,7 +253,7 @@ class TestBaseWrapper:
     
     def test_parse_annotation_basic_type(self):
         """Test _parse_annotation with basic types"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -267,7 +269,7 @@ class TestBaseWrapper:
         """Test _parse_annotation with Literal types"""
         from typing import Literal
         
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -282,9 +284,9 @@ class TestBaseWrapper:
     
     def test_flatten_union_and_literal(self):
         """Test _flatten_union_and_literal method"""
-        from typing import Literal, Union
+        from typing import Literal
         
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -302,7 +304,7 @@ class TestBaseWrapper:
         """Test _get_type_from_type_or_generic_alias method"""
         from typing import List
         
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -319,7 +321,7 @@ class TestBaseWrapper:
     
     def test_flatten_subparsers_empty(self):
         """Test _flatten_subparsers with empty subparsers"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -332,7 +334,7 @@ class TestBaseWrapper:
     
     def test_flatten_subgroups_empty(self):
         """Test _flatten_subgroups with empty subgroups"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -345,7 +347,7 @@ class TestBaseWrapper:
     
     def test_bind(self):
         """Test _bind method"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -360,7 +362,7 @@ class TestBaseWrapper:
     
     def test_hook_methods(self):
         """Test hook methods (should not raise exceptions)"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -377,11 +379,11 @@ class TestBaseWrapper:
     
     def test_add_wrapper_with_subparser(self):
         """Test add_wrapper method with SubparserWrapper"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        class MockSubparserWrapper(SubparserWrapper):
+        class MockSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -403,11 +405,11 @@ class TestBaseWrapper:
     
     def test_add_wrapper_with_subgroup(self):
         """Test add_wrapper method with SubgroupWrapper"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        class MockSubgroupWrapper(SubgroupWrapper):
+        class MockSubgroupWrapper[NS](SubgroupWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -429,11 +431,11 @@ class TestBaseWrapper:
     
     def test_add_wrapper_calls_hooks(self):
         """Test add_wrapper method calls binding hooks"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        class MockSubparserWrapper(SubparserWrapper):
+        class MockSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -456,7 +458,7 @@ class TestBaseWrapper:
     
     def test_add_wrapper_with_invalid_wrapper_type(self):
         """Test add_wrapper method with invalid wrapper type"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -472,11 +474,11 @@ class TestBaseWrapper:
     
     def test_add_wrapper_aliasing_behavior(self):
         """Test add_wrapper method aliasing behavior"""
-        class ConcreteWrapper(BaseWrapper):
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        class MockSubparserWrapper(SubparserWrapper):
+        class MockSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
@@ -506,7 +508,7 @@ class TestSubparserWrapper:
     
     def test_init(self):
         """Test SubparserWrapper initialization"""
-        class ConcreteSubparserWrapper(SubparserWrapper):
+        class ConcreteSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 mock_container = Mock(spec=ArgumentContainerProtocol)
                 mock_container.set_defaults = Mock()
@@ -524,7 +526,7 @@ class TestSubparserWrapper:
     
     def test_set_callback(self):
         """Test _set_callback method"""
-        class ConcreteSubparserWrapper(SubparserWrapper):
+        class ConcreteSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 mock_container = Mock(spec=ArgumentContainerProtocol)
                 mock_container.set_defaults = Mock()
@@ -540,7 +542,7 @@ class TestSubparserWrapper:
     
     def test_check_namespace_valid(self):
         """Test _check_namespace with valid namespace"""
-        class ConcreteSubparserWrapper(SubparserWrapper):
+        class ConcreteSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 mock_container = Mock(spec=ArgumentContainerProtocol)
                 mock_container.set_defaults = Mock()
@@ -560,7 +562,7 @@ class TestSubparserWrapper:
     
     def test_check_namespace_invalid(self):
         """Test _check_namespace with invalid namespace"""
-        class ConcreteSubparserWrapper(SubparserWrapper):
+        class ConcreteSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 mock_container = Mock(spec=ArgumentContainerProtocol)
                 mock_container.set_defaults = Mock()
@@ -580,7 +582,7 @@ class TestSubparserWrapper:
     
     def test_exec_callback_none(self):
         """Test _exec_callback with no callback set"""
-        class ConcreteSubparserWrapper(SubparserWrapper):
+        class ConcreteSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 mock_container = Mock(spec=ArgumentContainerProtocol)
                 mock_container.set_defaults = Mock()
@@ -597,7 +599,7 @@ class TestSubparserWrapper:
     
     def test_exec_callback_valid_namespace(self):
         """Test _exec_callback with valid namespace"""
-        class ConcreteSubparserWrapper(SubparserWrapper):
+        class ConcreteSubparserWrapper[NS](SubparserWrapper[NS]):
             def configure_container(self):
                 mock_container = Mock(spec=ArgumentContainerProtocol)
                 mock_container.set_defaults = Mock()
@@ -625,7 +627,7 @@ class TestSubgroupWrapper:
     
     def test_init(self):
         """Test SubgroupWrapper initialization"""
-        class ConcreteSubgroupWrapper(SubgroupWrapper):
+        class ConcreteSubgroupWrapper[NS](SubgroupWrapper[NS]):
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         

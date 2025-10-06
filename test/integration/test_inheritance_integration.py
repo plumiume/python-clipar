@@ -1,7 +1,5 @@
 """Integration tests for new inheritance features"""
 
-import argparse
-import pytest
 from clipar import namespace, group, mutually_exclusive_group
 
 

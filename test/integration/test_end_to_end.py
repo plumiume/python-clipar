@@ -2,7 +2,6 @@
 
 import argparse
 import pytest
-import sys
 from typing import Literal
 from clipar import namespace, group, mutually_exclusive_group, NotSelected
 from clipar import mixin
@@ -180,11 +179,12 @@ class TestGroupFunctionality:
             logging = LoggingConfig
             timeout: int = 30
 
-        @namespace
-        class CompleteConfig:
-            app_name: str
-            server = ServerConfig
-            debug: bool = False
+        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+            @namespace
+            class CompleteConfig:
+                app_name: str
+                server = ServerConfig
+                debug: bool = False
 
         # Argparse flattens all nested group arguments to the top level
         config = CompleteConfig.parse_args([
@@ -722,10 +722,11 @@ class TestNestedDecorators:
             port: int = 5432
             credentials = DatabaseCredentials
 
-        @namespace
-        class ApplicationConfig:
-            service_name: str
-            database = DatabaseConfig
+        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+            @namespace
+            class ApplicationConfig:
+                service_name: str
+                database = DatabaseConfig
 
         config = ApplicationConfig.parse_args([
             "ProductionService",
@@ -761,7 +762,7 @@ class TestNestedDecorators:
         # This should raise a TypeError because mutually exclusive groups cannot contain other mutually exclusive groups
         with pytest.raises(TypeError, match="The bound target does not support add_mutually_exclusive_group"):
             @namespace
-            class ServiceConfig:
+            class ServiceConfig: # pyright: ignore[reportUnusedClass]
                 service_name: str
                 logging = LoggingMode
                 timeout: int = 30
@@ -832,10 +833,11 @@ class TestNestedDecorators:
             level2 = Level2Config
             setting_d: str = "root_setting"
 
-        @namespace
-        class RootConfig:
-            name: str
-            nested = Level1Config
+        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+            @namespace
+            class RootConfig:
+                name: str
+                nested = Level1Config
 
         config = RootConfig.parse_args([
             "DeepNestTest",
@@ -912,10 +914,13 @@ class TestNestedDecorators:
 
         # Test command chain tracking
         result = MainApp.parse_args(["sub1", "nested", "--nested-arg", "test_value"])
-        
+        print(f'__dict__: {result.__dict__}')
+
         # Verify nested namespace structure
         assert hasattr(result, 'sub1')
+        assert result.sub1 is not NotSelected
         assert hasattr(result.sub1, 'nested')
+        assert result.sub1.nested is not NotSelected
         assert result.sub1.nested.nested_arg == "test_value"
 
 
@@ -1017,7 +1022,7 @@ class TestInnerClassDecorators:
                     cert_path: str = "/etc/ssl/cert.pem"
 
             @namespace
-            class MainConfig:
+            class MainConfig: # pyright: ignore[reportUnusedClass]
                 app_name: str
                 server = ServerGroup
 
@@ -1034,10 +1039,11 @@ class TestInnerClassDecorators:
                 password: str = "secret"
                 timeout: int = 30
 
-        @namespace
-        class AppConfig:
-            app_name: str
-            database = DatabaseGroup
+        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+            @namespace
+            class AppConfig:
+                app_name: str
+                database = DatabaseGroup
 
         config = AppConfig.parse_args([
             "DatabaseApp",
@@ -1070,10 +1076,11 @@ class TestInnerClassDecorators:
                 quote_char: str = '"'
                 escape_char: str = "\\"
 
-        @namespace
-        class ProcessorConfig:
-            input_file: str
-            output = OutputMode
+        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+            @namespace
+            class ProcessorConfig:
+                input_file: str
+                output = OutputMode
 
         config = ProcessorConfig.parse_args([
             "data.csv",
@@ -1093,24 +1100,25 @@ class TestInnerClassDecorators:
 
     def test_complex_nested_inner_classes(self):
         """Test complex nesting with multiple levels of inner classes"""
-        @namespace
-        class ComplexConfig:
-            application_name: str
-            
-            @group
-            class server:
-                host: str = "localhost"
-                port: int = 8080
+        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+            @namespace
+            class ComplexConfig:
+                application_name: str
                 
-                @mutually_exclusive_group
-                class auth:
-                    basic: bool = False
-                    oauth: bool = False
+                @group
+                class server:
+                    host: str = "localhost"
+                    port: int = 8080
                     
-                    @group
-                    class oauth_settings:
-                        client_id: str = "default_client"
-                        scope: str = "read"
+                    @mutually_exclusive_group
+                    class auth:
+                        basic: bool = False
+                        oauth: bool = False
+                        
+                        @group
+                        class oauth_settings:
+                            client_id: str = "default_client"
+                            scope: str = "read"
 
         config = ComplexConfig.parse_args([
             "ComplexApp",
@@ -1220,7 +1228,7 @@ class TestFieldAliasingAndConflicts:
         # This should raise an error due to conflicting argument names
         with pytest.raises((SystemExit, Exception)):  # May be SystemExit from argparse or other exception
             @namespace
-            class B0:
+            class B0: # pyright: ignore[reportUnusedClass]
                 b0name: str = "value0"
 
                 g1 = G1
@@ -1244,7 +1252,7 @@ class TestFieldAliasingAndConflicts:
         # Test that multiple references to the same group cause conflicts
         with pytest.raises((SystemExit, Exception)):
             @namespace
-            class ConflictConfig:
+            class ConflictConfig: # pyright: ignore[reportUnusedClass]
                 app_name: str = "MyApp"
                 database = DatabaseGroup
                 db_alias = DatabaseGroup  # Should conflict with database
@@ -1294,13 +1302,33 @@ class TestFieldAliasingAndConflicts:
 
         with pytest.raises((SystemExit, Exception)):
             @namespace
-            class GroupTest:
+            class GroupTest: # pyright: ignore[reportUnusedClass]
                 name: str = "test"
                 group_ref1 = GroupA
                 group_ref2 = GroupA  # Should conflict for groups
 
     def test_mixed_aliasing_scenarios(self):
-        """Test mixed scenarios with both namespace and group aliasing"""
+        """Test mixed scenarios with both namespace and group aliasing
+        
+        IMPORTANT: This test demonstrates key differences between @namespace and @group behavior:
+        
+        @namespace (SubparserWrapper):
+        - Creates subcommands that must be explicitly selected on command line
+        - Only the selected subcommand path is accessible; others return NotSelected
+        - Multiple aliases are allowed (config/config_alias can reference same class)
+        - Access condition: parent in namespace_table AND location matches command_chain
+        
+        @group (SubgroupWrapper):
+        - Creates argument groups within the current parser context
+        - Always accessible when parent namespace is reachable from root
+        - Multiple references cause conflicts (only one reference per group allowed)
+        - Access condition: parent in namespace_table (no command_chain requirement)
+        
+        The _after_parse logic in namespacewrapper.py implements this by:
+        1. Checking if holder.parent exists in namespace_table (common condition)
+        2. For SubparserWrapper only: additional check that location matches command_chain
+        3. Groups skip the command_chain check, making them always accessible
+        """
         @namespace
         class ConfigNamespace:
             config_setting: str = "config_value"
@@ -1333,7 +1361,9 @@ class TestFieldAliasingAndConflicts:
         assert config.config is not NotSelected
         assert config.config_alias is NotSelected  # Only selected subcommand is active
         assert config.config.config_setting == "modified_config"
-        assert config.settings is NotSelected
+        # Group is accessible when parent namespace is in command chain
+        assert config.settings is not NotSelected
+        assert config.settings.setting_value == "modified_settings"
 
         # Test the other alias
         config = MixedConfig.parse_args([
@@ -1346,14 +1376,15 @@ class TestFieldAliasingAndConflicts:
         assert config.config is NotSelected
         assert config.config_alias is not NotSelected
         assert config.config_alias.config_setting == "modified_config2"
-        assert config.settings is NotSelected
+        # Group remains accessible even with different subcommand selected
+        assert config.settings is not NotSelected
 
     def test_deep_aliasing_with_inner_classes(self):
         """Test aliasing behavior with inner classes - should cause conflicts with groups"""
         # This should raise conflicts due to group aliasing
         with pytest.raises((SystemExit, argparse.ArgumentError)):
             @namespace
-            class OuterAliasTest:
+            class OuterAliasTest: # pyright: ignore[reportUnusedClass]
                 main_setting: str = "main_value"
 
                 @namespace

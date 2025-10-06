@@ -16,6 +16,8 @@ import argparse
 
 from .class_ast import ClassAstHolder
 
+Location = list[str]
+OnParseHookArgs = tuple[Location, 'BoundWrapper[BaseWrapper[Any]]']
 Literalizable = str | int | float | bool | NoneType
 OBJECT_ATTRS = set(dir(object))
 
@@ -501,9 +503,9 @@ class BaseWrapper[NS](abc.ABC):
     def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper[Any]'):
         pass
 
-    def on_before_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
+    def on_before_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
-    def on_after_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
+    def on_after_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
 
     ## Public API

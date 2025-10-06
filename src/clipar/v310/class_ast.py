@@ -4,6 +4,7 @@ import inspect
 import textwrap
 import ast
 
+# TypeVar definitions for Python 3.10 compatibility
 _CLS = TypeVar('_CLS')
 
 class ClassAstHolder(Generic[_CLS]):
@@ -14,7 +15,7 @@ class ClassAstHolder(Generic[_CLS]):
     variable assignments with subsequent string literals as documentation.
     
     Type Parameters:
-        _CLS: The type of the class being analyzed
+        CLS: The type of the class being analyzed
     
     Attributes:
         cls: The class being analyzed
