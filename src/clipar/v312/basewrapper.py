@@ -597,6 +597,39 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         self._add_wrapper(self._container, name, wrapper)
 
     def copy(self) -> Self:
+        """
+        Create a deep copy of this wrapper instance.
+        
+        This method creates a complete independent copy of the wrapper, including:
+        - All configuration and state
+        - Nested subparsers and subgroups
+        - Argument definitions and their metadata
+        - Container configuration
+        
+        The copied wrapper maintains the same structure and behavior as the original
+        but operates independently - modifications to one wrapper won't affect the other.
+        
+        Returns:
+            Self: A new wrapper instance that is a deep copy of this one.
+        
+        Note:
+            - The namespace_type reference is preserved (not deep copied)
+            - All nested wrappers are recursively deep copied
+            - Container state is reconstructed during copy
+            - Useful for creating template wrappers or backup configurations
+        
+        Example:
+            ```python
+            original_wrapper = NamespaceWrapper(MyConfig)
+            original_wrapper.add_wrapper("sub", SubWrapper(SubConfig))
+            
+            # Create independent copy
+            copied_wrapper = original_wrapper.copy()
+            
+            # Modifications to copy don't affect original
+            copied_wrapper.add_wrapper("new_sub", AnotherWrapper(AnotherConfig))
+            ```
+        """
         from copy import deepcopy
         return deepcopy(self)
 
