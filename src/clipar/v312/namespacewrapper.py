@@ -1,7 +1,7 @@
 import sys
 from typing import (
     Any,
-    Iterable, Sequence,
+    Sequence,
     Callable,
     TypedDict,
 )
@@ -159,7 +159,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                 add_help=False,
             )
 
-    def _before_parse(self) -> Iterable[OnParseHookArgs]:
+    def _before_parse(self) -> list[OnParseHookArgs]:
 
         self.on_before_parse([], None)
 
@@ -168,10 +168,17 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             *(([name], holder) for name, holder in self._subparsers.items())
         ]
 
+        visited: set[OnParseHookArgs] = set()
+        ret: list[OnParseHookArgs] = []
+
         while stack:
 
             item = stack.pop()
-            yield item
+
+            if item in visited:
+                continue
+            visited.add(item)
+            ret.append(item)
             location, holder = item
 
             holder.self.on_before_parse(location, holder)
@@ -188,7 +195,9 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
         argcomplete.autocomplete(self._parser)
 
-    def _after_parse(self, namespace: argparse.Namespace, flattens: Iterable[OnParseHookArgs]) -> NS:
+        return ret
+
+    def _after_parse(self, namespace: argparse.Namespace, flattens: list[OnParseHookArgs]) -> NS:
 
         # leaf_wrapper: SubparserWrapper[Any] = getattr(namespace, '_clipar_wrapper')
         command_chain: list[str] = list(reversed(
