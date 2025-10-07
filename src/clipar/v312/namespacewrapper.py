@@ -161,6 +161,8 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
     def _before_parse(self) -> list[OnParseHookArgs]:
 
+        recursionlimit = sys.getrecursionlimit()
+
         self.on_before_parse([], None)
 
         stack: list[OnParseHookArgs] = [
@@ -176,6 +178,12 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             ret.append(item)
 
             location, holder = item
+
+            if len(location) > recursionlimit:
+                raise RecursionError(
+                    f"Recursion limit exceeded ({recursionlimit}). "
+                    f"Possible cyclic reference in subparsers/subgroups."
+                )
 
             holder.self.on_before_parse(location, holder)
 
