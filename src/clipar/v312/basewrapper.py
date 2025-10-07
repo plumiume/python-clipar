@@ -187,14 +187,17 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         ):
 
         assign_infos: dict[str, ClassAstHolder.VarInfo] = {}
-        try:
-            # assign_infos = ClassAstHolder(namespace_type).get_assign_infos()
-            for base in reversed(namespace_type.mro()):
+        # try:
+        #     assign_infos = ClassAstHolder(namespace_type).get_assign_infos()
+        # except (OSError, TypeError, SyntaxError, RuntimeError):
+        #     pass
+        for base in reversed(namespace_type.mro()):
+            try:
                 assign_infos.update(
                     ClassAstHolder(base).get_assign_infos()
                 )
-        except (OSError, TypeError, SyntaxError, RuntimeError):
-            pass
+            except (OSError, TypeError, SyntaxError, RuntimeError):
+                pass
 
         annotations = get_type_hints(namespace_type)
         attrnames = list(_get_attr_names(namespace_type))
