@@ -168,7 +168,6 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             *(([name], holder) for name, holder in self._subparsers.items())
         ]
 
-        visited: set[BoundWrapper[BaseWrapper[Any]]] = set()
         ret: list[OnParseHookArgs] = []
 
         while stack:
@@ -177,10 +176,6 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             ret.append(item)
 
             location, holder = item
-
-            if holder in visited:
-                continue
-            visited.add(holder)
 
             holder.self.on_before_parse(location, holder)
 
