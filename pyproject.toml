@@ -21,5 +21,3 @@ dev = [
     "ipython>=8.37.0",
     "pytest>=8.4.1",
 ]
-
-[pytest]

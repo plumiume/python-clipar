@@ -103,7 +103,33 @@ class GenericAliasLike(Protocol):
     __args__: tuple['GenericAliasLike | type | None', ...] | tuple[Any, EllipsisType]
     __origin__: Any
 
-class BaseWrapper[NS](abc.ABC):
+class _MetaWrapper(abc.ABCMeta):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        inst = super().__call__(*args, **kwargs)
+        if isinstance(inst, BaseWrapper):
+            inst._init_args = args # pyright: ignore[reportPrivateUsage]
+            inst._init_kwargs = kwargs # pyright: ignore[reportPrivateUsage]
+        return inst # pyright: ignore[reportUnknownVariableType]
+
+class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
+
+    ## Serialize
+
+    _init_args: tuple[Any, ...]
+    _init_kwargs: dict[str, Any]
+
+    @classmethod
+    def _reduce_init(
+        cls: type[Self],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any]
+        ) -> Self:
+        return cls(*args, **kwargs)
+
+    def __reduce__(self):
+        return (self._reduce_init, (self._init_args, self._init_kwargs))
+
+    ## Core
 
     def __init__(self, namespace_type: type[NS]):
         self.namespace_type = namespace_type
