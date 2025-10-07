@@ -1,6 +1,6 @@
 [project]
 name = "clipar"
-version = "0.1.0"
+version = "0.2.2"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -21,3 +21,5 @@ dev = [
     "ipython>=8.37.0",
     "pytest>=8.4.1",
 ]
+
+[pytest]

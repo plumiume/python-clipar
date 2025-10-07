@@ -1,8 +1,9 @@
 """Unit tests for clipar.v312.class_ast module"""
 
+# pyright: reportPrivateUsage=false
+
 import pytest
 import ast
-import textwrap
 from unittest.mock import patch, MagicMock
 from clipar.v312.class_ast import ClassAstHolder
 
@@ -32,18 +33,18 @@ class TestClassAstHolder:
         return SampleClass
 
     @pytest.fixture
-    def class_holder(self, sample_class):
+    def class_holder[T](self, sample_class: type[T]):
         """ClassAstHolder instance for testing"""
         return ClassAstHolder(sample_class)
 
-    def test_init_success(self, sample_class):
+    def test_init_success[T](self, sample_class: type[T]):
         """Test successful initialization of ClassAstHolder"""
         holder = ClassAstHolder(sample_class)
         assert holder.cls == sample_class
         assert isinstance(holder.classdef, ast.ClassDef)
         assert holder.classdef.name == "SampleClass"
 
-    def test_get_class_code_success(self, sample_class):
+    def test_get_class_code_success[T](self, sample_class: type[T]):
         """Test successful extraction of class source code"""
         holder = ClassAstHolder(sample_class)
         code = holder._get_class_code(sample_class)
@@ -64,7 +65,7 @@ class TestClassAstHolder:
             holder._get_class_code(str)
 
     @patch('inspect.getsource')
-    def test_get_class_code_unexpected_error(self, mock_getsource):
+    def test_get_class_code_unexpected_error(self, mock_getsource: MagicMock):
         """Test handling of unexpected errors when getting class code"""
         class TestClass:
             pass
@@ -80,7 +81,7 @@ class TestClassAstHolder:
         with pytest.raises(RuntimeError, match="Unexpected error while retrieving source code"):
             holder._get_class_code(TestClass)
 
-    def test_get_ast_tree_success(self, class_holder):
+    def test_get_ast_tree_success(self, class_holder: ClassAstHolder[type]):
         """Test successful AST tree generation"""
         code = "class TestClass:\n    pass"
         tree = class_holder._get_ast_tree(code)
@@ -88,7 +89,7 @@ class TestClassAstHolder:
         assert len(tree.body) == 1
         assert isinstance(tree.body[0], ast.ClassDef)
 
-    def test_get_ast_tree_syntax_error(self, class_holder):
+    def test_get_ast_tree_syntax_error(self, class_holder: ClassAstHolder[type]):
         """Test handling of syntax errors in code"""
         invalid_code = "class TestClass\n    pass"  # Missing colon
         
@@ -96,42 +97,42 @@ class TestClassAstHolder:
             class_holder._get_ast_tree(invalid_code)
 
     @patch('ast.parse')
-    def test_get_ast_tree_unexpected_error(self, mock_parse, class_holder):
+    def test_get_ast_tree_unexpected_error(self, mock_parse: MagicMock, class_holder: ClassAstHolder[type]):
         """Test handling of unexpected errors when parsing AST"""
         mock_parse.side_effect = ValueError("Unexpected parse error")
         
         with pytest.raises(RuntimeError, match="Unexpected error while parsing class code"):
             class_holder._get_ast_tree("class TestClass: pass")
 
-    def test_get_classdef_from_tree_success(self, class_holder):
+    def test_get_classdef_from_tree_success(self, class_holder: ClassAstHolder[type]):
         """Test successful extraction of ClassDef from AST tree"""
         tree = ast.parse("class TestClass:\n    pass")
         classdef = class_holder._get_classdef_from_tree(tree)
         assert isinstance(classdef, ast.ClassDef)
         assert classdef.name == "TestClass"
 
-    def test_get_classdef_from_tree_empty_body(self, class_holder):
+    def test_get_classdef_from_tree_empty_body(self, class_holder: ClassAstHolder[type]):
         """Test handling of empty AST body"""
         tree = ast.Module(body=[], type_ignores=[])
         
         with pytest.raises(RuntimeError, match="No class definition found"):
             class_holder._get_classdef_from_tree(tree)
 
-    def test_get_classdef_from_tree_not_classdef(self, class_holder):
+    def test_get_classdef_from_tree_not_classdef(self, class_holder: ClassAstHolder[type]):
         """Test handling of non-ClassDef nodes"""
         tree = ast.parse("def function(): pass")
         
         with pytest.raises(TypeError, match="does not contain a class definition"):
             class_holder._get_classdef_from_tree(tree)
 
-    def test_get_classdef_name_success(self, class_holder):
+    def test_get_classdef_name_success(self, class_holder: ClassAstHolder[type]):
         """Test successful extraction of class name"""
         classdef = ast.ClassDef(name="TestClass", bases=[], keywords=[], 
                                decorator_list=[], body=[], type_params=[])
         result = class_holder._get_classdef_name(classdef)
         assert result == "TestClass"
 
-    def test_get_classdef_name_not_classdef(self, class_holder):
+    def test_get_classdef_name_not_classdef(self, class_holder: ClassAstHolder[type]):
         """Test handling of non-ClassDef nodes"""
         funcdef = ast.FunctionDef(name="test_func", args=ast.arguments(
             posonlyargs=[], args=[], defaults=[], kwonlyargs=[], 
@@ -140,7 +141,7 @@ class TestClassAstHolder:
         result = class_holder._get_classdef_name(funcdef)
         assert result is None
 
-    def test_get_annassign_target_name_success(self, class_holder):
+    def test_get_annassign_target_name_success(self, class_holder: ClassAstHolder[type]):
         """Test successful extraction of annotated assignment target name"""
         target = ast.Name(id="var1", ctx=ast.Store())
         annotation = ast.Name(id="str", ctx=ast.Load())
@@ -149,13 +150,13 @@ class TestClassAstHolder:
         result = class_holder._get_annassign_target_name(annassign)
         assert result == "var1"
 
-    def test_get_annassign_target_name_not_annassign(self, class_holder):
+    def test_get_annassign_target_name_not_annassign(self, class_holder: ClassAstHolder[type]):
         """Test handling of non-AnnAssign nodes"""
         assign = ast.Assign(targets=[], value=ast.Constant(value=1))
         result = class_holder._get_annassign_target_name(assign)
         assert result is None
 
-    def test_get_annassign_target_name_complex_target(self, class_holder):
+    def test_get_annassign_target_name_complex_target(self, class_holder: ClassAstHolder[type]):
         """Test handling of complex target (not Name)"""
         target = ast.Attribute(value=ast.Name(id="self", ctx=ast.Load()), 
                               attr="var1", ctx=ast.Store())
@@ -165,7 +166,7 @@ class TestClassAstHolder:
         result = class_holder._get_annassign_target_name(annassign)
         assert result is None
 
-    def test_get_assign_target_name_success(self, class_holder):
+    def test_get_assign_target_name_success(self, class_holder: ClassAstHolder[type]):
         """Test successful extraction of assignment target name"""
         target = ast.Name(id="var1", ctx=ast.Store())
         assign = ast.Assign(targets=[target], value=ast.Constant(value=1))
@@ -173,7 +174,7 @@ class TestClassAstHolder:
         result = class_holder._get_assign_target_name(assign)
         assert result == "var1"
 
-    def test_get_assign_target_name_multiple_targets(self, class_holder):
+    def test_get_assign_target_name_multiple_targets(self, class_holder: ClassAstHolder[type]):
         """Test handling of multiple assignment targets"""
         target1 = ast.Name(id="var1", ctx=ast.Store())
         target2 = ast.Name(id="var2", ctx=ast.Store())
@@ -182,7 +183,7 @@ class TestClassAstHolder:
         result = class_holder._get_assign_target_name(assign)
         assert result is None
 
-    def test_get_assign_target_name_complex_target(self, class_holder):
+    def test_get_assign_target_name_complex_target(self, class_holder: ClassAstHolder[type]):
         """Test handling of complex target (not Name)"""
         target = ast.Attribute(value=ast.Name(id="self", ctx=ast.Load()), 
                               attr="var1", ctx=ast.Store())
@@ -191,7 +192,7 @@ class TestClassAstHolder:
         result = class_holder._get_assign_target_name(assign)
         assert result is None
 
-    def test_get_target_name_annassign(self, class_holder):
+    def test_get_target_name_annassign(self, class_holder: ClassAstHolder[type]):
         """Test _get_target_name with annotated assignment"""
         target = ast.Name(id="var1", ctx=ast.Store())
         annotation = ast.Name(id="str", ctx=ast.Load())
@@ -200,7 +201,7 @@ class TestClassAstHolder:
         result = class_holder._get_target_name(annassign)
         assert result == "var1"
 
-    def test_get_target_name_assign(self, class_holder):
+    def test_get_target_name_assign(self, class_holder: ClassAstHolder[type]):
         """Test _get_target_name with regular assignment"""
         target = ast.Name(id="var1", ctx=ast.Store())
         assign = ast.Assign(targets=[target], value=ast.Constant(value=1))
@@ -208,7 +209,7 @@ class TestClassAstHolder:
         result = class_holder._get_target_name(assign)
         assert result == "var1"
 
-    def test_get_target_name_none(self, class_holder):
+    def test_get_target_name_none(self, class_holder: ClassAstHolder[type]):
         """Test _get_target_name with neither assignment type"""
         funcdef = ast.FunctionDef(name="test_func", args=ast.arguments(
             posonlyargs=[], args=[], defaults=[], kwonlyargs=[], 
@@ -218,7 +219,7 @@ class TestClassAstHolder:
         result = class_holder._get_target_name(funcdef)
         assert result is None
 
-    def test_get_str_constant_expr_success(self, class_holder):
+    def test_get_str_constant_expr_success(self, class_holder: ClassAstHolder[type]):
         """Test successful extraction of string constant from expression"""
         constant = ast.Constant(value="test string")
         expr = ast.Expr(value=constant)
@@ -226,13 +227,13 @@ class TestClassAstHolder:
         result = class_holder._get_str_constant_expr(expr)
         assert result == "test string"
 
-    def test_get_str_constant_expr_not_expr(self, class_holder):
+    def test_get_str_constant_expr_not_expr(self, class_holder: ClassAstHolder[type]):
         """Test handling of non-Expr nodes"""
         assign = ast.Assign(targets=[], value=ast.Constant(value="test"))
         result = class_holder._get_str_constant_expr(assign)
         assert result is None
 
-    def test_get_str_constant_expr_not_constant(self, class_holder):
+    def test_get_str_constant_expr_not_constant(self, class_holder: ClassAstHolder[type]):
         """Test handling of non-Constant expression values"""
         name = ast.Name(id="var", ctx=ast.Load())
         expr = ast.Expr(value=name)
@@ -240,7 +241,7 @@ class TestClassAstHolder:
         result = class_holder._get_str_constant_expr(expr)
         assert result is None
 
-    def test_get_str_constant_expr_not_string(self, class_holder):
+    def test_get_str_constant_expr_not_string(self, class_holder: ClassAstHolder[type]):
         """Test handling of non-string constants"""
         constant = ast.Constant(value=42)
         expr = ast.Expr(value=constant)
@@ -248,7 +249,7 @@ class TestClassAstHolder:
         result = class_holder._get_str_constant_expr(expr)
         assert result is None
 
-    def test_get_assign_docs(self, class_holder):
+    def test_get_assign_docs(self, class_holder: ClassAstHolder[type]):
         """Test extraction of assignment documentation"""
         docs = class_holder.get_assign_docs()
         assert isinstance(docs, dict)
@@ -257,7 +258,7 @@ class TestClassAstHolder:
         assert "var2" in docs
         assert docs["var2"] == "Documentation for var2"
 
-    def test_get_orders(self, class_holder):
+    def test_get_orders(self, class_holder: ClassAstHolder[type]):
         """Test extraction of declaration order"""
         orders = class_holder.get_orders()
         assert isinstance(orders, dict)
@@ -268,7 +269,7 @@ class TestClassAstHolder:
         assert orders["var1"] < orders["var2"]
         assert orders["var2"] < orders["var3"]
 
-    def test_get_assign_infos(self, class_holder):
+    def test_get_assign_infos(self, class_holder: ClassAstHolder[type]):
         """Test extraction of combined assignment information"""
         infos = class_holder.get_assign_infos()
         assert isinstance(infos, dict)
@@ -288,7 +289,7 @@ class TestClassAstHolder:
         # Check order relationship
         assert var1_info.order < var2_info.order
 
-    def test_varinfo_namedtuple(self, class_holder):
+    def test_varinfo_namedtuple(self, class_holder: ClassAstHolder[type]):
         """Test _VarInfo NamedTuple functionality"""
         info = class_holder._VarInfo(doc="test doc", order=1)
         assert info.doc == "test doc"

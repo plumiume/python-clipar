@@ -1,14 +1,11 @@
-"""Unit tests for clipar.v312.decorator module"""
+"""Unit tests for clipar.v310.decorator module"""
 
-import pytest
-import argparse
-from unittest.mock import patch, MagicMock
-from clipar.v312.decorator import (
+from clipar.v310.decorator import (
     NamespaceWithOptions, GroupWithOptions, MutuallyExclusiveGroupWithOptions,
     namespace, group, mutually_exclusive_group
 )
-from clipar.v312.namespacewrapper import NamespaceWrapper, ArgumentParserOptions
-from clipar.v312.groupwrapper import (
+from clipar.v310.namespacewrapper import NamespaceWrapper, ArgumentParserOptions
+from clipar.v310.groupwrapper import (
     GroupWrapper, MutuallyExclusiveGroupWrapper, 
     GroupWrapperOptions, MutuallyExclusiveGroupWrapperOptions
 )

@@ -8,7 +8,7 @@ from typing import (
     TypeGuard, Final,
     get_type_hints, get_args, get_origin,
 )
-from types import UnionType, EllipsisType, NoneType
+from types import FunctionType, UnionType, EllipsisType, NoneType
 from enum import Enum
 
 from itertools import chain
@@ -16,6 +16,8 @@ import argparse
 
 from .class_ast import ClassAstHolder
 
+Location = list[str]
+OnParseHookArgs = tuple[Location, 'BoundWrapper[BaseWrapper[Any]]']
 Literalizable = str | int | float | bool | NoneType
 OBJECT_ATTRS = set(dir(object))
 
@@ -194,6 +196,10 @@ class BaseWrapper[NS](abc.ABC):
                     name=attr_key,
                     wrapper=default # pyright: ignore[reportUnknownArgumentType]
                 )
+
+            elif in_dict and isinstance(default, FunctionType):
+                # Ignore methods
+                continue
 
             elif in_dict:
                 self._arg_names.add(attr_key)
@@ -501,9 +507,9 @@ class BaseWrapper[NS](abc.ABC):
     def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper[Any]'):
         pass
 
-    def on_before_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
+    def on_before_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
-    def on_after_parse(self, bound_names: list[str], bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
+    def on_after_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
         pass
 
     ## Public API

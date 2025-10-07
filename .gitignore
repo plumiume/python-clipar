@@ -8,6 +8,7 @@ wheels/
 
 # uv environment files
 uv.lock
+uv*.lock
 
 # Virtual environments
 .venv

@@ -1,6 +1,9 @@
 """Unit tests for clipar.v312.mixin module"""
 
+# pyright: reportPrivateUsage=false
+
 import pytest
+from typing import Any
 from clipar.v312.mixin import _is_dunder, ReprMixin
 
 
@@ -77,8 +80,8 @@ class TestReprMixin:
         repr_str = repr(obj)
         
         # Should contain class name
-        assert "TestClass<" in repr_str
-        assert repr_str.endswith(">")
+        assert "TestClass(" in repr_str
+        assert repr_str.endswith(")")
         
         # Should contain attribute names and values
         assert "attr1='value1'" in repr_str
@@ -125,9 +128,9 @@ class TestReprMixin:
         obj = EmptyClass()
         repr_str = repr(obj)
         
-        # Should still show class name with angle brackets
-        assert repr_str.startswith("EmptyClass<")
-        assert repr_str.endswith(">")
+        # Should still show class name with parentheses
+        assert repr_str.startswith("EmptyClass(")
+        assert repr_str.endswith(")")
 
     def test_repr_with_methods(self):
         """Test __repr__ with class that has methods"""
@@ -172,13 +175,17 @@ class TestReprMixin:
 
     def test_repr_with_complex_attribute_values(self):
         """Test __repr__ with complex attribute values"""
+
+        def callable_attr(x: int) -> int:
+            return x + 1
+
         class TestClass(ReprMixin):
             def __init__(self):
                 self.string_attr = "test string"
                 self.list_attr = [1, 2, 3]
                 self.dict_attr = {"key": "value"}
                 self.none_attr = None
-                self.callable_attr = lambda x: x + 1
+                self.callable_attr = callable_attr
         
         obj = TestClass()
         repr_str = repr(obj)
@@ -225,12 +232,12 @@ class TestReprMixin:
         # Should contain both base and derived attributes
         assert "base_attr='base_value'" in repr_str
         assert "derived_attr='derived_value'" in repr_str
-        assert "DerivedClass<" in repr_str
+        assert "DerivedClass(" in repr_str
 
     def test_repr_with_descriptor_attributes(self):
         """Test __repr__ with descriptor attributes"""
         class TestDescriptor:
-            def __get__(self, obj, objtype=None):
+            def __get__(self, obj: Any, objtype: Any = None):
                 return "descriptor_value"
         
         class TestClass(ReprMixin):
@@ -287,7 +294,7 @@ class TestIntegrationScenarios:
         repr_str = repr(obj)
         
         # Should work with slotted classes
-        assert "SlottedClass<" in repr_str
+        assert "SlottedClass(" in repr_str
         assert "slot_attr1='slot1'" in repr_str
         assert "slot_attr2='slot2'" in repr_str
 
@@ -322,6 +329,6 @@ class TestEdgeCases:
         
         # Should handle self-reference without infinite recursion
         repr_str = repr(obj)
-        assert "RecursiveClass<" in repr_str
+        assert "RecursiveClass(" in repr_str
         assert "normal_attr='value'" in repr_str
         # self_ref will show as object representation

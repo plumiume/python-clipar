@@ -1,7 +1,8 @@
 """Unit tests for clipar.v312.groupwrapper module"""
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+# pyright: reportPrivateUsage=false
+
+from unittest.mock import Mock, patch
 import argparse
 from clipar.v312.groupwrapper import (
     LazyContainer, GroupWrapper, MutuallyExclusiveGroupWrapper,

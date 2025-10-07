@@ -1,13 +1,15 @@
 """Unit tests for clipar.v312.namespacewrapper module"""
 
-import pytest
+# pyright: reportUnusedVariable=false
+# pyright: reportUnusedClass=false
+
 import sys
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 import argparse
 from clipar.v312.namespacewrapper import (
     NamespaceWrapper, ArgumentParserOptions, SubParserOptions, TrackableSubParsersAction
 )
-from clipar.v312.basewrapper import BaseWrapper, SubparserWrapper
+from clipar.v312.basewrapper import SubparserWrapper
 
 
 class TestArgumentParserOptions:
@@ -266,7 +268,7 @@ class TestNamespaceWrapper:
         # accessing internal state or mocking ArgumentParser
 
     @patch('argparse.ArgumentParser')
-    def test_container_initialization_calls(self, mock_parser_class):
+    def test_container_initialization_calls(self, mock_parser_class: Mock):
         """Test that ArgumentParser is initialized with correct options"""
         class TestNamespace:
             arg1: str

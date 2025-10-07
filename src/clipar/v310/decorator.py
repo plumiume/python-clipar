@@ -1,11 +1,14 @@
-from typing import overload, Self, Final
-from typing_extensions import Unpack
+from typing import overload, Final, TypeVar
+from typing_extensions import Self, Unpack
 
 from .namespacewrapper import NamespaceWrapper, ArgumentParserOptions as NamespaceOptions
 from .groupwrapper import (
     GroupWrapper, GroupWrapperOptions as GroupOptions,
     MutuallyExclusiveGroupWrapper, MutuallyExclusiveGroupWrapperOptions as MutuallyExclusiveGroupWrapperOptions
 )
+
+# TypeVar definitions for Python 3.10 compatibility
+_NS = TypeVar('_NS')
 
 class NamespaceWithOptions:
 
@@ -16,11 +19,11 @@ class NamespaceWithOptions:
         self.options = options
 
     @overload
-    def __call__[NS](
+    def __call__(
         self,
-        namespace_type: type[NS],
+        namespace_type: type[_NS],
         /
-        ) -> NamespaceWrapper[NS]: ...
+        ) -> NamespaceWrapper[_NS]: ...
     @overload
     def __call__(
         self,
@@ -28,9 +31,9 @@ class NamespaceWithOptions:
         /,
         **options: Unpack[NamespaceOptions],
         ) -> Self: ...
-    def __call__[NS](
+    def __call__(
         self,
-        namespace_type: type[NS] | None = None,
+        namespace_type: type[_NS] | None = None,
         /,
         **options: Unpack[NamespaceOptions]
         ):
@@ -193,7 +196,7 @@ class NamespaceWithOptions:
         if namespace_type is None:
             return NamespaceWithOptions(new_options)
 
-        return NamespaceWrapper[NS](namespace_type, new_options)
+        return NamespaceWrapper[_NS](namespace_type, new_options)
 
 class GroupWithOptions:
 
@@ -204,11 +207,11 @@ class GroupWithOptions:
         self.options = options
 
     @overload
-    def __call__[NS](
+    def __call__(
         self,
-        namespace_type: type[NS],
+        namespace_type: type[_NS],
         /
-        ) -> GroupWrapper[NS]: ...
+        ) -> GroupWrapper[_NS]: ...
     @overload
     def __call__(
         self,
@@ -216,9 +219,9 @@ class GroupWithOptions:
         /,
         **options: Unpack[GroupOptions],
         ) -> Self: ...
-    def __call__[NS](
+    def __call__(
         self,
-        namespace_type: type[NS] | None = None,
+        namespace_type: type[_NS] | None = None,
         /,
         **options: Unpack[GroupOptions]
         ):
@@ -523,7 +526,7 @@ class GroupWithOptions:
         if namespace_type is None:
             return GroupWithOptions(new_options)
 
-        return GroupWrapper[NS](namespace_type, new_options)
+        return GroupWrapper[_NS](namespace_type, new_options)
 
 class MutuallyExclusiveGroupWithOptions:
 
@@ -534,11 +537,11 @@ class MutuallyExclusiveGroupWithOptions:
         self.options = options
 
     @overload
-    def __call__[NS](
+    def __call__(
         self,
-        namespace_type: type[NS],
+        namespace_type: type[_NS],
         /
-        ) -> MutuallyExclusiveGroupWrapper[NS]: ...
+        ) -> MutuallyExclusiveGroupWrapper[_NS]: ...
     @overload
     def __call__(
         self,
@@ -546,9 +549,9 @@ class MutuallyExclusiveGroupWithOptions:
         /,
         **options: Unpack[MutuallyExclusiveGroupWrapperOptions],
         ) -> Self: ...
-    def __call__[NS](
+    def __call__(
         self,
-        namespace_type: type[NS] | None = None,
+        namespace_type: type[_NS] | None = None,
         /,
         **options: Unpack[MutuallyExclusiveGroupWrapperOptions]
         ):
@@ -827,8 +830,8 @@ class MutuallyExclusiveGroupWithOptions:
         if namespace_type is None:
             return MutuallyExclusiveGroupWithOptions(new_options)
 
-        return MutuallyExclusiveGroupWrapper[NS](namespace_type, new_options)
+        return MutuallyExclusiveGroupWrapper[_NS](namespace_type, new_options)
 
 namespace: Final = NamespaceWithOptions({}).__call__
 group: Final = GroupWithOptions({}).__call__
-mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions({}).__call__()
+mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions({}).__call__
