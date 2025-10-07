@@ -4,7 +4,7 @@
 
 import pytest
 from typing import Any
-from clipar.v310.mixin import _is_dunder, ReprMixin
+from clipar.v310.mixin import _is_dunder, ReprMixin, CommandMixin, BaseMixin
 
 
 class TestIsDunderFunction:
@@ -332,3 +332,107 @@ class TestEdgeCases:
         assert "RecursiveClass(" in repr_str
         assert "normal_attr='value'" in repr_str
         # self_ref will show as object representation
+
+
+class TestBaseMixin:
+    """Test BaseMixin class functionality"""
+
+    def test_base_mixin_initialization(self):
+        """Test that BaseMixin properly initializes clipar_mixin_dict"""
+        class TestClass(BaseMixin):
+            pass
+
+        obj = TestClass()
+        assert hasattr(obj, 'clipar_mixin_dict')
+        assert obj.clipar_mixin_dict['_repr_lock'] is False
+        assert obj.clipar_mixin_dict['command'] is None
+
+    def test_base_mixin_dict_structure(self):
+        """Test the structure of clipar_mixin_dict"""
+        class TestClass(BaseMixin):
+            pass
+
+        obj = TestClass()
+        expected_keys = {'_repr_lock', 'command'}
+        assert set(obj.clipar_mixin_dict.keys()) == expected_keys
+        assert isinstance(obj.clipar_mixin_dict['_repr_lock'], bool)
+        assert obj.clipar_mixin_dict['command'] is None
+
+
+class TestCommandMixin:
+    """Test CommandMixin class functionality"""
+
+    def test_command_property_default(self):
+        """Test that command property returns None by default"""
+        class TestClass(CommandMixin):
+            pass
+
+        obj = TestClass()
+        assert obj.command is None
+
+    def test_command_property_getter(self):
+        """Test that command property correctly gets value from dict"""
+        class TestClass(CommandMixin):
+            pass
+
+        obj = TestClass()
+        
+        # Manually set command in the dict
+        obj.clipar_mixin_dict['command'] = "test_command"
+        assert obj.command == "test_command"
+
+        # Test with different value
+        obj.clipar_mixin_dict['command'] = "another_command"
+        assert obj.command == "another_command"
+
+        # Test with None again
+        obj.clipar_mixin_dict['command'] = None
+        assert obj.command is None
+
+    def test_command_mixin_inheritance(self):
+        """Test that CommandMixin properly inherits from BaseMixin"""
+        class TestClass(CommandMixin):
+            pass
+
+        obj = TestClass()
+        
+        # Should have both ReprMixin and CommandMixin functionality
+        assert hasattr(obj, 'clipar_mixin_dict')
+        assert hasattr(obj, 'command')
+        assert obj.clipar_mixin_dict['_repr_lock'] is False
+        assert obj.clipar_mixin_dict['command'] is None
+
+    def test_command_with_repr_mixin(self):
+        """Test CommandMixin working together with ReprMixin"""
+        class TestClass(CommandMixin, ReprMixin):
+            def __init__(self):
+                self.other_attr = "test_value"
+
+        obj = TestClass()
+        obj.clipar_mixin_dict['command'] = "my_command"
+        
+        # Should work with repr
+        repr_str = repr(obj)
+        assert "TestClass(" in repr_str
+        assert "other_attr='test_value'" in repr_str
+        
+        # Command should still work
+        assert obj.command == "my_command"
+
+    def test_command_property_type(self):
+        """Test that command property returns correct types"""
+        class TestClass(CommandMixin):
+            pass
+
+        # Get the property object
+        command_prop = getattr(TestClass, 'command')
+        assert isinstance(command_prop, property)
+        
+        # Check return values
+        obj = TestClass()
+        result = obj.command
+        assert result is None or isinstance(result, str)
+        
+        # Test with string value
+        obj.clipar_mixin_dict['command'] = "test"
+        assert isinstance(obj.command, str)

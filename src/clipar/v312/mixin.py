@@ -16,6 +16,7 @@ class _MetaMixin(type):
             _repr_lock=False,
             command=None
         )
+        return obj
 
 class BaseMixin(metaclass=_MetaMixin):
     clipar_mixin_dict: _CliparMixinDict

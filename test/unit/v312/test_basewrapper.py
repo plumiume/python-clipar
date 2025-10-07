@@ -11,7 +11,7 @@ from clipar.v312.basewrapper import (
     NotSelected, NotSelectedType,
     _return_bool, _append_list, _get_attr_names, # pyright: ignore[reportPrivateUsage]
     ArgumentContainerProtocol, GenericAliasLike,
-    OBJECT_ATTRS
+    MIXIN_ATTRIBUTES
 )
 from types import UnionType
 
@@ -126,13 +126,13 @@ class TestNotSelectedType:
 class TestConstants:
     """Test module constants"""
     
-    def test_object_attrs_constant(self):
-        """Test OBJECT_ATTRS contains expected object attributes"""
-        assert isinstance(OBJECT_ATTRS, set)
-        assert '__class__' in OBJECT_ATTRS
-        assert '__init__' in OBJECT_ATTRS
-        assert '__str__' in OBJECT_ATTRS
-        assert '__repr__' in OBJECT_ATTRS
+    def test_mixin_attributes_constant(self):
+        """Test MIXIN_ATTRIBUTES contains expected mixin attributes"""
+        assert isinstance(MIXIN_ATTRIBUTES, set)
+        assert '__class__' in MIXIN_ATTRIBUTES
+        assert '__init__' in MIXIN_ATTRIBUTES
+        assert '__str__' in MIXIN_ATTRIBUTES
+        assert '__repr__' in MIXIN_ATTRIBUTES
     
     def test_literalizable_type(self):
         """Test that Literalizable type covers expected types"""
