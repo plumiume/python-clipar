@@ -229,7 +229,6 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         for location, holder, tmp_ns, arg_names in reversed(namespace_table.values()):
 
             for a in arg_names:
-                print(tmp_ns.__class__.__name__, a)
                 setattr(tmp_ns, a, getattr(namespace, a))
 
             if holder is None:
