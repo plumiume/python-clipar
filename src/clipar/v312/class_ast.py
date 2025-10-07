@@ -126,15 +126,15 @@ class ClassAstHolder[CLS]:
             )
         }
 
-    class _VarInfo(NamedTuple):
+    class VarInfo(NamedTuple):
         doc: str | None
         order: int
 
-    def get_assign_infos(self) -> dict[str, _VarInfo]:
+    def get_assign_infos(self) -> dict[str, VarInfo]:
         assign_docs = self.get_assign_docs()
         orders = self.get_orders()
         return {
-            name: self._VarInfo(
+            name: self.VarInfo(
                 doc=assign_docs.get(name, None),
                 order=orders[name]
             )
