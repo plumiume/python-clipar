@@ -1,7 +1,15 @@
-from typing import Any, TypedDict
+from typing import Any, TypedDict, get_type_hints
+from types import FunctionType
 
 def _is_dunder(name: str) -> bool:
     return name.startswith('__') and name.endswith('__') and len(name) > 4
+
+def _mixin_attr[T](func_or_type: T) -> T:
+    if isinstance(func_or_type, FunctionType | type):
+        _mixin_attrs.add(func_or_type.__name__)
+    return func_or_type
+
+_mixin_attrs: set[str] = set()
 
 class _CliparMixinDict(TypedDict):
     _repr_lock: bool
@@ -20,6 +28,8 @@ class _MetaMixin(type):
 
 class BaseMixin(metaclass=_MetaMixin):
     clipar_mixin_dict: _CliparMixinDict
+_mixin_attrs.update(get_type_hints(BaseMixin))
+_mixin_attrs.update(dir(BaseMixin))
 
 class ReprMixin(BaseMixin):
     """A mixin class that provides a custom __repr__ method for better object representation.
@@ -29,6 +39,7 @@ class ReprMixin(BaseMixin):
     recursion through a lock mechanism.
     """
 
+    @_mixin_attr
     def __repr__(self):
 
         if self.clipar_mixin_dict['_repr_lock']:
@@ -66,6 +77,7 @@ class CommandMixin(BaseMixin):
     """
 
     @property
+    @_mixin_attr
     def command(self) -> str | None:
         """Get the stored command string."""
         return self.clipar_mixin_dict['command']

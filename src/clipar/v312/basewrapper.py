@@ -15,13 +15,15 @@ from itertools import chain
 import argparse
 
 from .class_ast import ClassAstHolder
-from .mixin import BaseMixin
+from .mixin import _mixin_attrs # pyright: ignore[reportPrivateUsage]
 
 Location = list[str]
 OnParseHookArgs = tuple[Location, 'BoundWrapper[BaseWrapper[Any]]']
 Literalizable = str | int | float | bool | NoneType
-MIXIN_ATTRIBUTES = set(dir(BaseMixin))
-MIXIN_ANNOTATIONS = get_type_hints(BaseMixin)
+# deleted
+# MIXIN_ATTRIBUTES = set(dir(BaseMixin))
+# MIXIN_ANNOTATIONS = get_type_hints(BaseMixin)
+
 
 def _return_bool(value: bool) -> bool:
     return value
@@ -171,11 +173,11 @@ class BaseWrapper[NS](abc.ABC):
             *(
                 a for a in annotations
                 if a not in attrnames
-                and a not in MIXIN_ANNOTATIONS
+                and a not in _mixin_attrs
             ),
             *(
                 a for a in attrnames
-                if a not in MIXIN_ATTRIBUTES
+                if a not in _mixin_attrs
                 and not a.startswith('_')
             )
         ]
