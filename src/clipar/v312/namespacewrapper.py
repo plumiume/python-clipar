@@ -182,7 +182,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             if len(location) > recursionlimit:
                 raise RecursionError(
                     f"Recursion limit exceeded ({recursionlimit}). "
-                    f"Possible cyclic reference in subparsers/subgroups."
+                    f"Possible cyclic reference in namespace definition."
                 )
 
             holder.self.on_before_parse(location, holder)

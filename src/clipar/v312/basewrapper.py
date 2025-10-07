@@ -28,9 +28,9 @@ Literalizable = str | int | float | bool | NoneType
 def _return_bool(value: bool) -> bool:
     return value
 
-def _append_list[T](target: list[T], *args: T) -> list[T]:
-    target.extend(args)
-    return target
+# def _append_list[T](target: list[T], *args: T) -> list[T]:
+#     target.extend(args)
+#     return target
 
 def _get_attr_names(cls: type) -> Iterable[str]:
     for base in reversed(cls.mro()):
@@ -497,37 +497,37 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             )
         return tmp
 
-    def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper[SubparserWrapper[Any]]']]:
+    # def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper[SubparserWrapper[Any]]']]:
 
-        return list(chain.from_iterable(
-            chain(
-                (
-                    ([name], bound_wrapper),
-                ),
-                (
-                    (_append_list(child_names, name), child_bound_wrapper)
-                    for child_names, child_bound_wrapper
-                    in bound_wrapper.self._flatten_subparsers()
-                )
-            )
-            for name, bound_wrapper in self._subparsers.items()
-        ))
+    #     return list(chain.from_iterable(
+    #         chain(
+    #             (
+    #                 ([name], bound_wrapper),
+    #             ),
+    #             (
+    #                 (_append_list(child_names, name), child_bound_wrapper)
+    #                 for child_names, child_bound_wrapper
+    #                 in bound_wrapper.self._flatten_subparsers()
+    #             )
+    #         )
+    #         for name, bound_wrapper in self._subparsers.items()
+    #     ))
 
-    def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper[SubgroupWrapper[Any]]']]:
+    # def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper[SubgroupWrapper[Any]]']]:
 
-        return list(chain.from_iterable(
-            chain(
-                (
-                    ([name], bound_wrapper),
-                ),
-                (
-                    (_append_list(child_names, name), child_bound_wrapper)
-                    for child_names, child_bound_wrapper
-                    in bound_wrapper.self._flatten_subgroups()
-                )
-            )
-            for name, bound_wrapper in self._subgroups.items()
-        ))
+    #     return list(chain.from_iterable(
+    #         chain(
+    #             (
+    #                 ([name], bound_wrapper),
+    #             ),
+    #             (
+    #                 (_append_list(child_names, name), child_bound_wrapper)
+    #                 for child_names, child_bound_wrapper
+    #                 in bound_wrapper.self._flatten_subgroups()
+    #             )
+    #         )
+    #         for name, bound_wrapper in self._subgroups.items()
+    #     ))
 
     def _bind(self, name: str, parent: 'BaseWrapper[Any]') -> 'BoundWrapper[Self]':
         return BoundWrapper(name, parent, self)
@@ -595,6 +595,10 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         """
 
         self._add_wrapper(self._container, name, wrapper)
+
+    def copy(self) -> Self:
+        from copy import deepcopy
+        return deepcopy(self)
 
 class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
     def __init__(
