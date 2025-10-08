@@ -18,6 +18,8 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "colorama>=0.4.6",
+    "ipykernel>=6.30.1",
     "ipython>=8.37.0",
     "pytest>=8.4.1",
 ]
