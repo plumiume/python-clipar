@@ -11,7 +11,7 @@ uv.lock
 uv*.lock
 
 # Virtual environments
-.venv
+.venv/
 
 # pytest
 .cache/
