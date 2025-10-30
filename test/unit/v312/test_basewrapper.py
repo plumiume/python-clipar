@@ -9,10 +9,10 @@ from unittest.mock import Mock, patch
 from clipar.v312.basewrapper import (
     BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper,
     NotSelected, NotSelectedType,
-    _return_bool, _append_list, _get_attr_names, # pyright: ignore[reportPrivateUsage]
-    ArgumentContainerProtocol, GenericAliasLike,
-    MIXIN_ATTRIBUTES
+    _return_bool, _get_attr_names, # pyright: ignore[reportPrivateUsage]
+    ArgumentContainerProtocol, GenericAliasLike
 )
+from clipar.v312.mixin import _mixin_attrs # pyright: ignore[reportPrivateUsage]
 from types import UnionType
 
 
@@ -24,12 +24,7 @@ class TestUtilityFunctions:
         assert _return_bool(True) is True
         assert _return_bool(False) is False
     
-    def test_append_list(self):
-        """Test _append_list function"""
-        target = [1, 2]
-        result = _append_list(target, 3, 4)
-        assert result == [1, 2, 3, 4]
-        assert target == [1, 2, 3, 4]  # Original list is modified
+    # _append_list function was removed in v312 implementation
 
     def test_get_attr_names_simple_class(self):
         """Test _get_attr_names with a simple class"""
@@ -127,12 +122,12 @@ class TestConstants:
     """Test module constants"""
     
     def test_mixin_attributes_constant(self):
-        """Test MIXIN_ATTRIBUTES contains expected mixin attributes"""
-        assert isinstance(MIXIN_ATTRIBUTES, set)
-        assert '__class__' in MIXIN_ATTRIBUTES
-        assert '__init__' in MIXIN_ATTRIBUTES
-        assert '__str__' in MIXIN_ATTRIBUTES
-        assert '__repr__' in MIXIN_ATTRIBUTES
+        """Test _mixin_attrs contains expected mixin attributes"""
+        assert isinstance(_mixin_attrs, set)
+        assert '__class__' in _mixin_attrs
+        assert '__init__' in _mixin_attrs
+        assert '__str__' in _mixin_attrs
+        assert '__repr__' in _mixin_attrs
     
     def test_literalizable_type(self):
         """Test that Literalizable type covers expected types"""

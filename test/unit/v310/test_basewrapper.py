@@ -638,11 +638,7 @@ class TestSubgroupWrapper:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubgroupWrapper(MockNamespace)
-<<<<<<< HEAD
-            assert wrapper.namespace_type == MockNamespace
-=======
             assert wrapper.namespace_type is MockNamespace
->>>>>>> 634386990649851d014f031b012aa42839dd7621
 
 
 class TestBoundWrapper:
@@ -761,13 +757,6 @@ class TestInheritanceFeatures:
             
             wrapper = TestWrapper(DerivedConfig)
             
-<<<<<<< HEAD
-            # Verify that the wrapper was created successfully
-            assert wrapper is not None
-            assert wrapper.namespace_type == DerivedConfig
-
-
-=======
         # Verify that the wrapper was created successfully
         assert wrapper is not None
         assert wrapper.namespace_type == DerivedConfig
@@ -798,6 +787,5 @@ class TestInheritanceFeatures:
             assert 'name' in wrapper._arg_names
             assert 'count' in wrapper._arg_names
             assert 'clipar_mixin_dict' not in wrapper._arg_names
->>>>>>> 634386990649851d014f031b012aa42839dd7621
 if __name__ == "__main__":
     pytest.main([__file__])
