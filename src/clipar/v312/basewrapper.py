@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
+"""
+Base wrapper implementation for Python 3.12+ compatibility.
+
+This module provides the core BaseWrapper class with enhanced type support
+and modern Python features for command-line interface definitions.
+"""
+
 # pyright: reportUnnecessaryIsInstance=false
 import abc
 from typing import (
@@ -17,9 +27,12 @@ import argparse
 from .class_ast import ClassAstHolder
 from .mixin import _mixin_attrs # pyright: ignore[reportPrivateUsage]
 
+Literalizable = str | int | float | bool | NoneType
 Location = list[str]
 OnParseHookArgs = tuple[Location, 'BoundWrapper[BaseWrapper[Any]]']
-Literalizable = str | int | float | bool | NoneType
+FlattenAnnInfo = dict['GenericAliasLike | type', tuple[bool, list[Literalizable]]]
+PositionedAnnInfo = tuple[FlattenAnnInfo, Callable[[str], object], bool, int]
+'f_info, type_fn, is_limited, flatten_len'
 # deleted
 # MIXIN_ATTRIBUTES = set(dir(BaseMixin))
 # MIXIN_ANNOTATIONS = get_type_hints(BaseMixin)
@@ -28,16 +41,56 @@ Literalizable = str | int | float | bool | NoneType
 def _return_bool(value: bool) -> bool:
     return value
 
-# def _append_list[T](target: list[T], *args: T) -> list[T]:
-#     target.extend(args)
-#     return target
-
 def _get_attr_names(cls: type) -> Iterable[str]:
     for base in reversed(cls.mro()):
         if hasattr(base, '__slots__'):
             yield from getattr(base, '__slots__')
         if hasattr(base, '__dict__'):
             yield from getattr(base, '__dict__')
+
+def _get_type_origin(
+    annotation: 'GenericAliasLike | type'
+    ) -> type:
+
+    tmp = annotation
+    while isinstance(tmp, GenericAliasLike):
+        tmp = tmp.__origin__
+    if not isinstance(tmp, type):
+        raise TypeError(
+            f"Annotation {annotation} is not a type."
+        )
+    return tmp
+
+def _flatten_info_to_strs(info: FlattenAnnInfo) -> list[str]:
+    return list(_flatten_info_to_strs_impl(info))
+
+def _flatten_info_to_strs_impl(info: FlattenAnnInfo) -> Iterable[str]:
+    for ann, (limited, lits) in info.items():
+        if not limited or not lits:
+            yield (
+                '' if limited else
+                f'{ann.__name__.upper()}'
+                if isinstance(ann, type) else
+                f'{ann}' # GenericAliasLike
+            )
+        yield from map(str, lits)
+
+class _SentinelType: ...
+_Sentinel = _SentinelType()
+
+def _insert_sep[T, S](sep: S,iterable: Iterable[T]) -> Iterable[T | S]:
+    iterator = iter(iterable)
+    first = next(iterator, _Sentinel)
+    if isinstance(first, _SentinelType):
+        return
+    yield first
+    # print(first, end='')
+    for item in iterator:
+        yield sep
+        # print(sep, end='')
+        yield item
+        # print(item, end='')
+    # print()
 
 class _NotSelectedType:
     def __bool__(self) -> Literal[False]:
@@ -128,6 +181,11 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
     def __reduce__(self):
         return (self._reduce_init, (self._init_args, self._init_kwargs))
+
+    ## Repr
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__qualname__}({self.namespace_type})'
 
     ## Core
 
@@ -289,6 +347,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         nargs: int | Literal['?', '*', '+'] | None
         type: Callable[[str], object]
         choices: Sequence[object] | None
+        metavar: str | tuple[str, ...]
 
     def _add_req(
         self,
@@ -319,8 +378,8 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
         parse_result = self._parse_annotation(annotation)
 
-        type_ = parse_result.get('type', None)
-        if isinstance(type_, type) and issubclass(type_, bool):
+        # boolean flag optimization - check if annotation is bool type
+        if isinstance(annotation, type) and issubclass(annotation, bool):
             action = 'store_false' if default else 'store_true'
             parse_result = self._ParseAnnotationResult()
         else:
@@ -335,45 +394,48 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             **parse_result,
         )
 
+    # NOTE: metavar examples
+    # (signle)
+    # str -> STR
+    # int | str -> {INT|STR}
+    # Literal['a', 1, True] -> {a,1,True}
+    # Literal['a', 'b', 'c', 'd', 'e', 'f'] -> None
+    # int | Literal['a', 'b'] -> {INT|a|b}
+    # (sequence)
+    # list[<single>] -> [<single>...]
+    # tuple[<single>, ...] -> [<single>...]
+    # tuple[<single1>, <single2>] -> <single1> <single2>
+
     def _parse_annotation(
         self,
         annotation: GenericAliasLike | UnionType | type
         ) -> _ParseAnnotationResult:
 
-        nargs, annotation_args = self._determine_nargs_and_generic_args(annotation)
+        result = self._ParseAnnotationResult()
 
-        flatten_union_and_literal = self._flatten_union_and_literal(annotation_args)
+        result['nargs'], annotation_args = self._determine_nargs_and_generic_args(annotation)
 
-        pick_choices_are_required = [
-            all(
-                isinstance(ann, Literalizable)
-                for ann in literals
-            )
-            for literals in flatten_union_and_literal.values()
-        ]
-
-        if all(pick_choices_are_required):
-            choices = list(chain.from_iterable(
-                flatten_union_and_literal.values()
-            ))
-        else:
-            choices = None
-
-        if len(flatten_union_and_literal) == 1:
-            ann = next(iter(flatten_union_and_literal.keys()))
-            type_ = self._get_type_from_type_or_generic_alias(ann)
-
-        else:
-            type_ = self._multi_type_builder(
-                flatten_union_and_literal,
-                pick_choices_are_required
+        if isinstance(result.get('nargs'), int):
+            nargs_info = self._FixedIntNargsInfo([
+                self._parse_pos_ann_info((a,))
+                for a in annotation_args
+            ])
+            result['type'] = nargs_info.type_fn
+            result['metavar'] = tuple(
+                ''.join(im) for im in nargs_info.iter_metavar
             )
 
-        return self._ParseAnnotationResult(
-            nargs=nargs,
-            type=type_,
-            choices=choices
-        )
+        else:
+            default_info = self._DefaultNargsInfo(
+                self._parse_pos_ann_info(annotation_args)
+            )
+            result['type'] = default_info.type_fn
+            if default_info.iter_metavar:
+                result['metavar'] = ''.join(default_info.iter_metavar)
+            if default_info.choices:
+                result['choices'] = default_info.choices
+
+        return result
 
     def _determine_nargs_and_generic_args(
         self,
@@ -389,10 +451,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         if isinstance(annotation, type):
             return None, (annotation, )
 
-        if isinstance(annotation, UnionType):
-            return None, tp_args
-
-        if tp_origin in (Literal, Union):
+        if isinstance(annotation, UnionType) or tp_origin in (Literal, Union):
             return None, tp_args
 
         if not isinstance(tp_origin, type):
@@ -402,10 +461,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
         no_ellipsis_args = tuple(a for a in tp_args if a is not ...)
 
-        if ... in tp_args:
-            return '*', no_ellipsis_args
-
-        if issubclass(tp_origin, tuple):
+        if issubclass(tp_origin, tuple) and ... not in tp_args:
             return len(no_ellipsis_args), no_ellipsis_args
 
         if issubclass(tp_origin, Sequence):
@@ -413,13 +469,33 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
         return None, (annotation, )
 
+    def _parse_pos_ann_info(
+        self,
+        annotation_args: tuple[GenericAliasLike | UnionType | type | None, ...]
+        ) -> PositionedAnnInfo:
+
+            flatten_annotations = self._flatten_union_and_literal(annotation_args)
+
+            if len(flatten_annotations) == 1:
+                type_fn = _get_type_origin(next(iter(flatten_annotations)))
+            else:
+                # type_fn = self._multi_type_builder(flatten_annotations)
+                type_fn = self._MultiTypeFn(flatten_annotations)
+
+            is_limited = all(
+                ann_only for ann_only, _ in flatten_annotations.values()
+            )
+
+            flatten_len = sum(
+                len(lits) for _, lits in flatten_annotations.values()
+            )
+
+            return (flatten_annotations, type_fn, is_limited, flatten_len)
+
     def _flatten_union_and_literal(
         self,
         annotations: tuple[GenericAliasLike | UnionType | type | None, ...]
-        ) -> dict[
-            GenericAliasLike | type,
-            list[GenericAliasLike | type | Literalizable]
-        ]:
+        ) -> FlattenAnnInfo:
 
         union_args = list(chain.from_iterable(
             ann.__args__
@@ -439,70 +515,99 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
         ret: dict[
             type | GenericAliasLike,
-            list[type | GenericAliasLike | Literalizable]
+            tuple[bool, list[Literalizable]]
         ] = {
-            ann: [ann]
+            ann: (False, [])
             for ann in literal_args
             if isinstance(ann, type | GenericAliasLike)
         }
 
         for ann in literal_args:
             if isinstance(ann, Literalizable):
-                ret.setdefault(type(ann), []).append(ann)
+                ret.setdefault(type(ann), (True, []))[1].append(ann)
 
         return ret
 
-    def _multi_type_builder(
-        self,
-        flatten_union_and_literal: dict[
-            type |  GenericAliasLike,
-            list[type |  GenericAliasLike | Literalizable]
-        ],
-        pick_choices_are_required: list[bool]
-        ):
+    class _MultiTypeFn:
 
-        def type_impl(value: str) -> object:
+        def __init__(self, flatten_ann: FlattenAnnInfo):
+            self._info = flatten_ann
 
-                zipped = zip(
-                    flatten_union_and_literal.keys(),
-                    flatten_union_and_literal.values(),
-                    pick_choices_are_required
-                )
-                for ann, literals, pick_choices in zipped:
+        def __call__(self, value: str) -> object:
 
-                    type_ = self._get_type_from_type_or_generic_alias(ann)
+            for ann , (limited, lits) in self._info.items():
 
-                    try:
-                        inst = type_(value)
-                    except (ValueError, TypeError):
-                        continue
+                type_ = _get_type_origin(ann)
 
-                    if pick_choices and inst not in literals:
-                        raise ValueError(
-                            f"Value '{value}' is not in choices {literals}."
-                        )
+                try:
+                    inst = type_(value)
+                except (ValueError, TypeError):
+                    continue # try next type
 
-                    return inst
+                if limited and inst not in lits:
+                    raise ValueError(
+                        f"Value '{value}' is not in choices {lits}."
+                    )
 
-                raise ValueError(
-                    f"Cannot convert value '{value}' to any of the types: "
-                    f"{', '.join(str(ann) for ann in flatten_union_and_literal.keys())}."
-                )
-        return type_impl
+                return inst
 
-    def _get_type_from_type_or_generic_alias(
-        self,
-        annotation: GenericAliasLike | type
-        ) -> type:
+    class _DefaultNargsInfo:
 
-        tmp = annotation
-        while isinstance(tmp, GenericAliasLike):
-            tmp = tmp.__origin__
-        if not isinstance(tmp, type):
-            raise TypeError(
-                f"Annotation {annotation} is not a type."
+        def __init__(self, pos_ann_info: PositionedAnnInfo):
+            self._info = pos_ann_info
+
+        def type_fn(self, value: str) -> object:
+            return self._info[1](value)
+
+        @property
+        def iter_metavar(self) -> Iterable[str]:
+            if self._info[3] > 5:
+                yield '{DEST_PLCHLDR}'
+                return
+            if self._info[3] > 2:
+                yield '{'
+            yield from _insert_sep(
+                '|', _flatten_info_to_strs(self._info[0]),
             )
-        return tmp
+            if self._info[3] > 2:
+                yield '}'
+
+        @property
+        def choices(self) -> list[Literalizable] | None:
+            if not self._info[2]:
+                return None
+            return list(chain.from_iterable(
+                lits
+                for _, lits in self._info[0].values()
+            ))
+
+    class _FixedIntNargsInfo:
+
+        def __init__(self, pos_ann_infos: list[PositionedAnnInfo]):
+            self._infos = pos_ann_infos
+            self._info_iter = iter(pos_ann_infos)
+
+        def type_fn(self, value: str) -> object:
+
+            pair = next(self._info_iter, None)
+            if pair is None:
+                raise ValueError(f"Too many arguments provided (expected {len(self._infos)}).")
+            _, type_fn, _, _ = pair
+            return type_fn(value)
+
+        @property
+        def iter_metavar(self) -> tuple[Iterable[str], ...]:
+            return tuple(
+                '{DEST_PLCHLDR}' if info[3] > 5 else
+                chain(
+                    ('{',) if info[3] > 2 else (),
+                    _insert_sep(
+                        '|', _flatten_info_to_strs(info[0]),
+                    ),
+                    ('}',) if info[3] > 2 else (),
+                )
+                for info in self._infos
+            )
 
     # def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper[SubparserWrapper[Any]]']]:
 

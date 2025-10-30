@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
+"""
+Namespace wrapper implementation for Python 3.12+ compatibility.
+
+This module provides the NamespaceWrapper class with enhanced type support
+and modern Python features for handling argument parsing and namespace creation.
+"""
+
 import sys
 from typing import (
     Any,

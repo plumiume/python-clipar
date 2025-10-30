@@ -1,3 +1,12 @@
+"""
+AST analysis utilities for extracting class metadata and documentation.
+
+This module provides tools for parsing Python class definitions using the AST
+(Abstract Syntax Tree) to extract variable assignments and their associated
+documentation strings. This enables automatic help text generation for CLI
+arguments based on inline comments in class definitions.
+"""
+
 from typing import NamedTuple, TypeVar, Generic
 import itertools
 import inspect

@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
+"""
+Decorator implementation for Python 3.10/3.11 compatibility.
+
+This module provides the decorators (@namespace, @group, etc.) that enable
+declarative CLI definition using type annotations and class-based syntax.
+"""
+
 from typing import overload, Final, TypeVar
 from typing_extensions import Self, Unpack
 

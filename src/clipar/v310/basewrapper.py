@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
+"""
+Base wrapper implementation for Python 3.10/3.11 compatibility.
+
+This module provides the core BaseWrapper class that serves as the foundation
+for command-line interface definitions using type annotations and decorators.
+"""
+
 # pyright: reportUnnecessaryIsInstance=false
 import abc
 from typing import (
@@ -291,8 +301,8 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
 
         parse_result = self._parse_annotation(annotation)
 
-        type_ = parse_result.get('type', None)
-        if isinstance(type_, type) and issubclass(type_, bool):
+        # boolean flag optimization - check if annotation is bool type
+        if isinstance(annotation, type) and issubclass(annotation, bool):
             action = 'store_false' if default else 'store_true'
             parse_result = self._ParseAnnotationResult()
         else:

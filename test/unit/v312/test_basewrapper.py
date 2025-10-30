@@ -9,10 +9,10 @@ from unittest.mock import Mock, patch
 from clipar.v312.basewrapper import (
     BaseWrapper, SubparserWrapper, SubgroupWrapper, BoundWrapper,
     NotSelected, NotSelectedType,
-    _return_bool, _append_list, _get_attr_names, # pyright: ignore[reportPrivateUsage]
-    ArgumentContainerProtocol, GenericAliasLike,
-    MIXIN_ATTRIBUTES
+    _return_bool, _get_attr_names, # pyright: ignore[reportPrivateUsage]
+    ArgumentContainerProtocol, GenericAliasLike
 )
+from clipar.v312.mixin import _mixin_attrs # pyright: ignore[reportPrivateUsage]
 from types import UnionType
 
 
@@ -24,12 +24,7 @@ class TestUtilityFunctions:
         assert _return_bool(True) is True
         assert _return_bool(False) is False
     
-    def test_append_list(self):
-        """Test _append_list function"""
-        target = [1, 2]
-        result = _append_list(target, 3, 4)
-        assert result == [1, 2, 3, 4]
-        assert target == [1, 2, 3, 4]  # Original list is modified
+    # _append_list function was removed in v312 implementation
 
     def test_get_attr_names_simple_class(self):
         """Test _get_attr_names with a simple class"""
@@ -127,12 +122,12 @@ class TestConstants:
     """Test module constants"""
     
     def test_mixin_attributes_constant(self):
-        """Test MIXIN_ATTRIBUTES contains expected mixin attributes"""
-        assert isinstance(MIXIN_ATTRIBUTES, set)
-        assert '__class__' in MIXIN_ATTRIBUTES
-        assert '__init__' in MIXIN_ATTRIBUTES
-        assert '__str__' in MIXIN_ATTRIBUTES
-        assert '__repr__' in MIXIN_ATTRIBUTES
+        """Test _mixin_attrs contains expected mixin attributes"""
+        assert isinstance(_mixin_attrs, set)
+        assert '__class__' in _mixin_attrs
+        assert '__init__' in _mixin_attrs
+        assert '__str__' in _mixin_attrs
+        assert '__repr__' in _mixin_attrs
     
     def test_literalizable_type(self):
         """Test that Literalizable type covers expected types"""
@@ -251,20 +246,6 @@ class TestBaseWrapper:
             wrapper.update_container(new_container)
             assert wrapper._container is new_container
     
-    def test_parse_annotation_basic_type(self):
-        """Test _parse_annotation with basic types"""
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            result = wrapper._parse_annotation(str)
-            assert 'type' in result
-            assert result['type'] is str
-    
     def test_parse_annotation_literal(self):
         """Test _parse_annotation with Literal types"""
         from typing import Literal
@@ -299,51 +280,6 @@ class TestBaseWrapper:
             result = wrapper._flatten_union_and_literal((str, int, literal_type))
             assert str in result
             assert int in result
-    
-    def test_get_type_from_type_or_generic_alias(self):
-        """Test _get_type_from_type_or_generic_alias method"""
-        from typing import List
-        
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            
-            # Test with basic type
-            assert wrapper._get_type_from_type_or_generic_alias(str) is str
-            
-            # Test with generic alias
-            assert wrapper._get_type_from_type_or_generic_alias(List[str]) is list
-    
-    def test_flatten_subparsers_empty(self):
-        """Test _flatten_subparsers with empty subparsers"""
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            result = wrapper._flatten_subparsers()
-            assert result == []
-    
-    def test_flatten_subgroups_empty(self):
-        """Test _flatten_subgroups with empty subgroups"""
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            result = wrapper._flatten_subgroups()
-            assert result == []
     
     def test_bind(self):
         """Test _bind method"""

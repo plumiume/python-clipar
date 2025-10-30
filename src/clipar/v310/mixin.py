@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
+"""
+Mixin classes for Python 3.10/3.11 compatibility.
+
+This module provides mixin classes that add functionality like custom repr
+and command storage to CLI wrapper classes.
+"""
+
 from typing import Any, TypedDict
 
 def _is_dunder(name: str) -> bool:
