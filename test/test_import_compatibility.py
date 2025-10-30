@@ -121,7 +121,7 @@ class TestTopLevelImportCompatibility:
         
         # Test that ReprMixin functionality works
         repr_str = repr(config)
-        assert "MixinImportTest<" in repr_str
+        assert "MixinImportTest(" in repr_str
         assert "name='mixin_test'" in repr_str
         assert "count=5" in repr_str
 

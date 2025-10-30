@@ -301,8 +301,8 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
 
         parse_result = self._parse_annotation(annotation)
 
-        type_ = parse_result.get('type', None)
-        if isinstance(type_, type) and issubclass(type_, bool):
+        # boolean flag optimization - check if annotation is bool type
+        if isinstance(annotation, type) and issubclass(annotation, bool):
             action = 'store_false' if default else 'store_true'
             parse_result = self._ParseAnnotationResult()
         else:

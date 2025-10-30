@@ -371,7 +371,7 @@ class TestMixinFunctionality:
         
         # Test that ReprMixin provides a good string representation
         repr_str = repr(config)
-        assert "ConfigWithRepr<" in repr_str
+        assert "ConfigWithRepr(" in repr_str
         assert "name='test'" in repr_str
         assert "verbose=True" in repr_str
         assert "count=5" in repr_str
@@ -441,7 +441,7 @@ class TestMixinFunctionality:
 
         # Test repr functionality
         repr_str = repr(config)
-        assert "ComplexConfig<" in repr_str
+        assert "ComplexConfig(" in repr_str
         assert "service_name='MyService'" in repr_str
 
 
