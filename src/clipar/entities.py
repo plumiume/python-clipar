@@ -27,6 +27,6 @@ else:
 
 __all__ = [
     "BaseWrapper",
-    "NamespaceWrapper", 
+    "NamespaceWrapper",
     "GroupWrapper",
 ]

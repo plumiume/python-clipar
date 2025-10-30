@@ -638,7 +638,11 @@ class TestSubgroupWrapper:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubgroupWrapper(MockNamespace)
+<<<<<<< HEAD
             assert wrapper.namespace_type == MockNamespace
+=======
+            assert wrapper.namespace_type is MockNamespace
+>>>>>>> 634386990649851d014f031b012aa42839dd7621
 
 
 class TestBoundWrapper:
@@ -757,10 +761,43 @@ class TestInheritanceFeatures:
             
             wrapper = TestWrapper(DerivedConfig)
             
+<<<<<<< HEAD
             # Verify that the wrapper was created successfully
             assert wrapper is not None
             assert wrapper.namespace_type == DerivedConfig
 
 
+=======
+        # Verify that the wrapper was created successfully
+        assert wrapper is not None
+        assert wrapper.namespace_type == DerivedConfig
+
+    def test_mixin_attributes_excluded_from_processing(self):
+        """Test that BaseMixin attributes are excluded from argument processing"""
+        from clipar.v310.mixin import BaseMixin
+        
+        class TestConfig(BaseMixin):
+            # Regular attributes that should be processed
+            name: str = "default"
+            count: int = 42
+            
+            # These should be inherited from BaseMixin and excluded
+            # clipar_mixin_dict should be excluded
+        
+        class TestWrapper(BaseWrapper[TestConfig]):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = TestWrapper(TestConfig)
+            
+            # Only user-defined attributes should be in _arg_names
+            # clipar_mixin_dict should NOT be there
+            assert 'name' in wrapper._arg_names
+            assert 'count' in wrapper._arg_names
+            assert 'clipar_mixin_dict' not in wrapper._arg_names
+>>>>>>> 634386990649851d014f031b012aa42839dd7621
 if __name__ == "__main__":
     pytest.main([__file__])

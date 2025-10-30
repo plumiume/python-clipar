@@ -1,13 +1,11 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
 """
-Decorator functions for creating CLI interfaces from Python classes.
+Decorator implementation for Python 3.10/3.11 compatibility.
 
-Copyright (c) 2025 Clipar Contributors
-SPDX-License-Identifier: MIT
-
-This module provides the main decorator functions (@namespace, @group, 
-@mutually_exclusive_group) that transform Python classes into command-line
-interface components. Each decorator creates appropriate wrapper objects
-that handle argparse configuration and parsing.
+This module provides the decorators (@namespace, @group, etc.) that enable
+declarative CLI definition using type annotations and class-based syntax.
 """
 
 from typing import overload, Final, TypeVar
@@ -23,18 +21,11 @@ from .groupwrapper import (
 _NS = TypeVar('_NS')
 
 class NamespaceWithOptions:
-    """
-    Intermediate class for namespace decorator with configurable options.
-    
-    This class allows for delayed application of namespace options, enabling
-    the @namespace decorator to be used both with and without parameters.
-    """
 
     def __init__(
         self,
         options: NamespaceOptions
         ):
-        # Store the namespace configuration options
         self.options = options
 
     @overload
@@ -851,56 +842,6 @@ class MutuallyExclusiveGroupWithOptions:
 
         return MutuallyExclusiveGroupWrapper[_NS](namespace_type, new_options)
 
-# Main decorator functions exported to users
-
 namespace: Final = NamespaceWithOptions({}).__call__
-"""
-@namespace decorator for creating CLI namespaces from Python classes.
-
-Transforms a class into a command-line interface where class attributes become
-CLI arguments. Supports nested subcommands and argument groups.
-
-Usage:
-    @namespace
-    class Config:
-        verbose: bool = False
-        input_file: str
-        
-    config = Config.parse_args(['--verbose', 'file.txt'])
-"""
-
 group: Final = GroupWithOptions({}).__call__
-"""
-@group decorator for creating argument groups within namespaces.
-
-Creates a logical grouping of related CLI arguments that appear together
-in help output and can be accessed as a nested object.
-
-Usage:
-    @group
-    class DatabaseGroup:
-        host: str = "localhost" 
-        port: int = 5432
-        
-    @namespace
-    class Config:
-        database = DatabaseGroup
-"""
-
 mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions({}).__call__
-"""
-@mutually_exclusive_group decorator for creating mutually exclusive arguments.
-
-Creates a group where only one argument can be specified at a time.
-Attempting to specify multiple arguments from the group results in an error.
-
-Usage:
-    @mutually_exclusive_group  
-    class OutputFormat:
-        json: bool = False
-        xml: bool = False
-        
-    @namespace
-    class Config:
-        output = OutputFormat
-"""

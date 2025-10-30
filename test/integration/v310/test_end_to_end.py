@@ -1,6 +1,7 @@
 """End-to-end integration tests for clipar"""
 
 import argparse
+import sys
 import pytest
 from typing import Literal
 from clipar import namespace, group, mutually_exclusive_group, NotSelected
@@ -179,11 +180,20 @@ class TestGroupFunctionality:
             logging = LoggingConfig
             timeout: int = 30
 
-        @namespace
-        class CompleteConfig:
-            app_name: str
-            server = ServerConfig
-            debug: bool = False
+        # DeprecationWarning for nested groups is only available in Python 3.12+
+        if sys.version_info >= (3, 12):
+            with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+                @namespace
+                class CompleteConfig:
+                    app_name: str
+                    server = ServerConfig
+                    debug: bool = False
+        else:
+            @namespace
+            class CompleteConfig:
+                app_name: str
+                server = ServerConfig
+                debug: bool = False
 
         # Argparse flattens all nested group arguments to the top level
         config = CompleteConfig.parse_args([
@@ -370,7 +380,7 @@ class TestMixinFunctionality:
         
         # Test that ReprMixin provides a good string representation
         repr_str = repr(config)
-        assert "ConfigWithRepr<" in repr_str
+        assert "ConfigWithRepr(" in repr_str
         assert "name='test'" in repr_str
         assert "verbose=True" in repr_str
         assert "count=5" in repr_str
@@ -440,7 +450,7 @@ class TestMixinFunctionality:
 
         # Test repr functionality
         repr_str = repr(config)
-        assert "ComplexConfig<" in repr_str
+        assert "ComplexConfig(" in repr_str
         assert "service_name='MyService'" in repr_str
 
 
@@ -721,10 +731,18 @@ class TestNestedDecorators:
             port: int = 5432
             credentials = DatabaseCredentials
 
-        @namespace
-        class ApplicationConfig:
-            service_name: str
-            database = DatabaseConfig
+        # DeprecationWarning for nested groups is only available in Python 3.12+
+        if sys.version_info >= (3, 12):
+            with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+                @namespace
+                class ApplicationConfig:
+                    service_name: str
+                    database = DatabaseConfig
+        else:
+            @namespace
+            class ApplicationConfig:
+                service_name: str
+                database = DatabaseConfig
 
         config = ApplicationConfig.parse_args([
             "ProductionService",
@@ -831,10 +849,18 @@ class TestNestedDecorators:
             level2 = Level2Config
             setting_d: str = "root_setting"
 
-        @namespace
-        class RootConfig:
-            name: str
-            nested = Level1Config
+        # DeprecationWarning for nested groups is only available in Python 3.12+
+        if sys.version_info >= (3, 12):
+            with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+                @namespace
+                class RootConfig:
+                    name: str
+                    nested = Level1Config
+        else:
+            @namespace
+            class RootConfig:
+                name: str
+                nested = Level1Config
 
         config = RootConfig.parse_args([
             "DeepNestTest",
@@ -1036,10 +1062,18 @@ class TestInnerClassDecorators:
                 password: str = "secret"
                 timeout: int = 30
 
-        @namespace
-        class AppConfig:
-            app_name: str
-            database = DatabaseGroup
+        # DeprecationWarning for nested groups is only available in Python 3.12+
+        if sys.version_info >= (3, 12):
+            with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+                @namespace
+                class AppConfig:
+                    app_name: str
+                    database = DatabaseGroup
+        else:
+            @namespace
+            class AppConfig:
+                app_name: str
+                database = DatabaseGroup
 
         config = AppConfig.parse_args([
             "DatabaseApp",
@@ -1072,10 +1106,18 @@ class TestInnerClassDecorators:
                 quote_char: str = '"'
                 escape_char: str = "\\"
 
-        @namespace
-        class ProcessorConfig:
-            input_file: str
-            output = OutputMode
+        # DeprecationWarning for nested groups is only available in Python 3.12+
+        if sys.version_info >= (3, 12):
+            with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+                @namespace
+                class ProcessorConfig:
+                    input_file: str
+                    output = OutputMode
+        else:
+            @namespace
+            class ProcessorConfig:
+                input_file: str
+                output = OutputMode
 
         config = ProcessorConfig.parse_args([
             "data.csv",
@@ -1095,24 +1137,46 @@ class TestInnerClassDecorators:
 
     def test_complex_nested_inner_classes(self):
         """Test complex nesting with multiple levels of inner classes"""
-        @namespace
-        class ComplexConfig:
-            application_name: str
-            
-            @group
-            class server:
-                host: str = "localhost"
-                port: int = 8080
-                
-                @mutually_exclusive_group
-                class auth:
-                    basic: bool = False
-                    oauth: bool = False
+        # DeprecationWarning for nested groups is only available in Python 3.12+
+        if sys.version_info >= (3, 12):
+            with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+                @namespace
+                class ComplexConfig:
+                    application_name: str
                     
                     @group
-                    class oauth_settings:
-                        client_id: str = "default_client"
-                        scope: str = "read"
+                    class server:
+                        host: str = "localhost"
+                        port: int = 8080
+                        
+                        @mutually_exclusive_group
+                        class auth:
+                            basic: bool = False
+                            oauth: bool = False
+                            
+                            @group
+                            class oauth_settings:
+                                client_id: str = "default_client"
+                                scope: str = "read"
+        else:
+            @namespace
+            class ComplexConfig:
+                application_name: str
+                
+                @group
+                class server:
+                    host: str = "localhost"
+                    port: int = 8080
+                    
+                    @mutually_exclusive_group
+                    class auth:
+                        basic: bool = False
+                        oauth: bool = False
+                        
+                        @group
+                        class oauth_settings:
+                            client_id: str = "default_client"
+                            scope: str = "read"
 
         config = ComplexConfig.parse_args([
             "ComplexApp",
@@ -1396,3 +1460,4 @@ class TestFieldAliasingAndConflicts:
                 # Group inner class aliasing - should cause conflicts
                 inner_group_ref = inner_group
                 inner_group_alias = inner_group  # This causes conflict
+

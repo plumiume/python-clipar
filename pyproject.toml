@@ -1,6 +1,6 @@
 [project]
 name = "clipar"
-version = "0.2.1"
+version = "0.2.2"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -18,6 +18,8 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "colorama>=0.4.6",
+    "ipykernel>=6.30.1",
     "ipython>=8.37.0",
     "pytest>=8.4.1",
 ]

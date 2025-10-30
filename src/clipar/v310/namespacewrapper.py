@@ -1,9 +1,11 @@
-"""
-Namespace wrapper implementation for creating CLI root parsers and subparsers.
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
 
-This module implements NamespaceWrapper, which creates ArgumentParser instances
-and handles top-level command parsing, subcommand routing, and argument 
-post-processing. It serves as the main entry point for CLI applications.
+"""
+Namespace wrapper implementation for Python 3.10/3.11 compatibility.
+
+This module provides the NamespaceWrapper class that handles argument parsing
+and namespace creation for command-line interfaces with subcommands and groups.
 """
 
 import sys
@@ -34,12 +36,6 @@ ParentSubparserId = int
 
 
 class ArgumentParserOptions(TypedDict, total=False):
-    """
-    Type definition for ArgumentParser configuration options.
-    
-    Defines the allowed keyword arguments that can be passed to configure
-    an ArgumentParser instance when creating a namespace wrapper.
-    """
     prog: str | None
     "The name of the program (default: sys.argv[0])"
     usage: str | None

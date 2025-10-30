@@ -11,9 +11,11 @@ uv.lock
 uv*.lock
 
 # Virtual environments
-venv
-.venv
+.venv/
 
 # pytest
 .cache/
 .pytest_cache/
+
+# VS Code settings
+.vscode/
