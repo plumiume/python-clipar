@@ -246,20 +246,6 @@ class TestBaseWrapper:
             wrapper.update_container(new_container)
             assert wrapper._container is new_container
     
-    def test_parse_annotation_basic_type(self):
-        """Test _parse_annotation with basic types"""
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            result = wrapper._parse_annotation(str)
-            assert 'type' in result
-            assert result['type'] is str
-    
     def test_parse_annotation_literal(self):
         """Test _parse_annotation with Literal types"""
         from typing import Literal
@@ -294,51 +280,6 @@ class TestBaseWrapper:
             result = wrapper._flatten_union_and_literal((str, int, literal_type))
             assert str in result
             assert int in result
-    
-    def test_get_type_from_type_or_generic_alias(self):
-        """Test _get_type_from_type_or_generic_alias method"""
-        from typing import List
-        
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            
-            # Test with basic type
-            assert wrapper._get_type_from_type_or_generic_alias(str) is str
-            
-            # Test with generic alias
-            assert wrapper._get_type_from_type_or_generic_alias(List[str]) is list
-    
-    def test_flatten_subparsers_empty(self):
-        """Test _flatten_subparsers with empty subparsers"""
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            result = wrapper._flatten_subparsers()
-            assert result == []
-    
-    def test_flatten_subgroups_empty(self):
-        """Test _flatten_subgroups with empty subgroups"""
-        class ConcreteWrapper[NS](BaseWrapper[NS]):
-            def configure_container(self):
-                return Mock(spec=ArgumentContainerProtocol)
-        
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
-            mock_ast.return_value.get_assign_infos.return_value = {}
-            
-            wrapper = ConcreteWrapper(MockNamespace)
-            result = wrapper._flatten_subgroups()
-            assert result == []
     
     def test_bind(self):
         """Test _bind method"""

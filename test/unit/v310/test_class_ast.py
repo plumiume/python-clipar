@@ -293,8 +293,8 @@ class TestClassAstHolder:
         assert var1_info.order < var2_info.order
 
     def test_varinfo_namedtuple(self, class_holder: ClassAstHolder[_T]):
-        """Test _VarInfo NamedTuple functionality"""
-        info = class_holder._VarInfo(doc="test doc", order=1)
+        """Test VarInfo NamedTuple functionality (VarInfo is now public)"""
+        info = class_holder.VarInfo(doc="test doc", order=1)
         assert info.doc == "test doc"
         assert info.order == 1
         assert len(info) == 2
