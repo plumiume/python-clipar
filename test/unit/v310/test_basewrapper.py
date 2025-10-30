@@ -179,7 +179,7 @@ class TestBaseWrapper:
                 return Mock(spec=ArgumentContainerProtocol)
         
         # Mock ClassAstHolder to avoid file system dependencies
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -194,7 +194,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -206,7 +206,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -219,7 +219,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -232,7 +232,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -246,7 +246,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -260,7 +260,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -276,7 +276,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -293,7 +293,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -311,7 +311,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -328,7 +328,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -341,7 +341,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -354,7 +354,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -369,7 +369,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -390,7 +390,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -416,7 +416,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -442,7 +442,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -465,7 +465,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -485,7 +485,7 @@ class TestBaseWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteWrapper(MockNamespace)
@@ -517,7 +517,7 @@ class TestSubparserWrapper:
                 mock_container.set_defaults = Mock()
                 return mock_container
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubparserWrapper(MockNamespace)
@@ -535,7 +535,7 @@ class TestSubparserWrapper:
                 mock_container.set_defaults = Mock()
                 return mock_container
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubparserWrapper(MockNamespace)
@@ -551,7 +551,7 @@ class TestSubparserWrapper:
                 mock_container.set_defaults = Mock()
                 return mock_container
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubparserWrapper(MockNamespace)
@@ -571,7 +571,7 @@ class TestSubparserWrapper:
                 mock_container.set_defaults = Mock()
                 return mock_container
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubparserWrapper(MockNamespace)
@@ -591,7 +591,7 @@ class TestSubparserWrapper:
                 mock_container.set_defaults = Mock()
                 return mock_container
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubparserWrapper(MockNamespace)
@@ -608,7 +608,7 @@ class TestSubparserWrapper:
                 mock_container.set_defaults = Mock()
                 return mock_container
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubparserWrapper(MockNamespace)
@@ -634,11 +634,11 @@ class TestSubgroupWrapper:
             def configure_container(self):
                 return Mock(spec=ArgumentContainerProtocol)
         
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             wrapper = ConcreteSubgroupWrapper(MockNamespace)
-            assert wrapper.namespace_type is MockNamespace
+            assert wrapper.namespace_type == MockNamespace
 
 
 class TestBoundWrapper:
@@ -704,7 +704,7 @@ class TestInheritanceFeatures:
                 return Mock(spec=ArgumentContainerProtocol)
 
         # Mock ClassAstHolder to avoid dependency issues  
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.return_value.get_assign_infos.return_value = {}
             
             # Should not raise an exception
@@ -726,7 +726,7 @@ class TestInheritanceFeatures:
                 return Mock(spec=ArgumentContainerProtocol)
 
         # Mock ClassAstHolder to raise an exception
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
             mock_ast.side_effect = OSError("Cannot get source")
             
             # This should not raise an exception even if ClassAstHolder fails
@@ -749,8 +749,8 @@ class TestInheritanceFeatures:
                 return Mock(spec=ArgumentContainerProtocol)
 
         # Mock ClassAstHolder and _get_attr_names for controlled testing
-        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast, \
-             patch('clipar.v312.basewrapper._get_attr_names') as mock_get_attrs:
+        with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast, \
+             patch('clipar.v310.basewrapper._get_attr_names') as mock_get_attrs:
             
             mock_ast.return_value.get_assign_infos.return_value = {}
             mock_get_attrs.return_value = ['base_option', 'base_flag', 'derived_option', 'derived_required']

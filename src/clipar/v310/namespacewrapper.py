@@ -1,3 +1,11 @@
+"""
+Namespace wrapper implementation for creating CLI root parsers and subparsers.
+
+This module implements NamespaceWrapper, which creates ArgumentParser instances
+and handles top-level command parsing, subcommand routing, and argument 
+post-processing. It serves as the main entry point for CLI applications.
+"""
+
 import sys
 from typing import (
     Any,
@@ -26,6 +34,12 @@ ParentSubparserId = int
 
 
 class ArgumentParserOptions(TypedDict, total=False):
+    """
+    Type definition for ArgumentParser configuration options.
+    
+    Defines the allowed keyword arguments that can be passed to configure
+    an ArgumentParser instance when creating a namespace wrapper.
+    """
     prog: str | None
     "The name of the program (default: sys.argv[0])"
     usage: str | None

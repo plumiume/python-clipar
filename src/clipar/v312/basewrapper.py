@@ -22,16 +22,22 @@ Literalizable = str | int | float | bool | NoneType
 OBJECT_ATTRS = set(dir(object))
 
 def _return_bool(value: bool) -> bool:
+    """Helper function to return boolean value unchanged."""
     return value
 
 def _append_list[T](target: list[T], *args: T) -> list[T]:
+    """Append multiple values to a list and return the modified list."""
     target.extend(args)
     return target
 
 def _get_attr_names(cls: type) -> Iterable[str]:
+    """Extract attribute names from class hierarchy including slots and dict attributes."""
+    # Iterate through method resolution order in reverse to get base classes first
     for base in reversed(cls.mro()):
+        # Collect attributes from __slots__ if present
         if hasattr(base, '__slots__'):
             yield from getattr(base, '__slots__')
+        # Collect attributes from __dict__ if present
         if hasattr(base, '__dict__'):
             yield from getattr(base, '__dict__')
 

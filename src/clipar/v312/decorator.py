@@ -1,3 +1,12 @@
+"""
+Decorator functions for creating CLI interfaces from Python classes.
+
+This module provides the main decorator functions (@namespace, @group, 
+@mutually_exclusive_group) that transform Python classes into command-line
+interface components. Each decorator creates appropriate wrapper objects
+that handle argparse configuration and parsing.
+"""
+
 from typing import overload, Self, Unpack, Final
 
 from .namespacewrapper import NamespaceWrapper, ArgumentParserOptions as NamespaceOptions

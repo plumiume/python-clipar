@@ -1,7 +1,30 @@
+"""
+Mixin classes providing additional functionality for CLI namespace objects.
+
+This module contains utility mixins that can be inherited by namespace classes
+to add extra functionality like improved string representation.
+"""
+
 def _is_dunder(name: str) -> bool:
+    """Check if attribute name is a dunder (double underscore) method."""
     return name.startswith('__') and name.endswith('__') and len(name) > 4
 
 class ReprMixin:
+    """
+    Mixin class providing improved string representation for namespace objects.
+    
+    Provides a detailed __repr__ method that shows all non-dunder attributes
+    and their values. Includes protection against infinite recursion.
+    
+    Example:
+        @namespace  
+        class Config(ReprMixin):
+            verbose: bool = False
+            count: int = 1
+            
+        config = Config.parse_args()
+        print(repr(config))  # Config<verbose=False count=1>
+    """
 
     def __repr__(self):
 

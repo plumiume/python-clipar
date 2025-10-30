@@ -28,20 +28,27 @@ Literalizable = str | int | float | bool | NoneType
 OBJECT_ATTRS = set(dir(object))
 
 def _return_bool(value: bool) -> bool:
+    """Helper function to return boolean value unchanged."""
     return value
 
 def _append_list(target: list[_T], *args: _T) -> list[_T]:
+    """Append multiple values to a list and return the modified list."""
     target.extend(args)
     return target
 
 def _get_attr_names(cls: type) -> Iterable[str]:
+    """Extract attribute names from class hierarchy including slots and dict attributes."""
+    # Iterate through method resolution order in reverse to get base classes first
     for base in reversed(cls.mro()):
+        # Collect attributes from __slots__ if present
         if hasattr(base, '__slots__'):
             yield from getattr(base, '__slots__')
+        # Collect attributes from __dict__ if present
         if hasattr(base, '__dict__'):
             yield from getattr(base, '__dict__')
 
 class _NotSelectedType:
+    """Private implementation class for NotSelected sentinel value."""
     def __bool__(self) -> Literal[False]:
         return False
     def __getattr__(self, name: str) -> 'Literal[NotSelectedType.I]':
@@ -51,6 +58,12 @@ class _NotSelectedType:
             raise AttributeError() from e
 
 class NotSelectedType(Enum):
+    """
+    Enum singleton for representing unselected CLI arguments or groups.
+    
+    Used as a sentinel value to distinguish between explicitly set default values
+    and arguments/groups that were not activated during parsing.
+    """
     I = _NotSelectedType()
     "A singleton instance representing a value that is not selected or set."
     def __repr__(self) -> str:
@@ -65,6 +78,12 @@ class NotSelectedType(Enum):
 NotSelected: Final = NotSelectedType.I
 
 class AddArgumentOptions(TypedDict, total=False):
+    """
+    Type definition for argparse.ArgumentParser.add_argument() options.
+    
+    Provides type hints for valid keyword arguments that can be passed
+    to ArgumentParser.add_argument() method.
+    """
     action: str | type[argparse.Action]
     nargs: int | Literal['?', '*', '+'] | None
     const: object
@@ -106,13 +125,33 @@ class GenericAliasLike(Protocol):
     __origin__: Any
 
 class BaseWrapper(abc.ABC, Generic[_NS]):
+    """
+    Abstract base class for all CLI wrapper types.
+    
+    BaseWrapper provides the foundation for wrapping Python classes to generate
+    command-line interfaces using argparse. It handles the core functionality
+    of binding class attributes to CLI arguments and managing subcommands/groups.
+    
+    Type Parameters:
+        _NS: The namespace class type that this wrapper operates on
+        
+    Attributes:
+        namespace_type: The class type being wrapped
+        _subparsers: Dictionary of subparser wrappers for nested namespaces
+        _subgroups: Dictionary of subgroup wrappers for argument groups  
+        _arg_names: Set of argument names registered in this wrapper
+        _container: The argparse container (parser or group) for this wrapper
+    """
 
     def __init__(self, namespace_type: type[_NS]):
+        # Store the namespace class type being wrapped
         self.namespace_type = namespace_type
+        # Initialize collections for nested components
         self._subparsers: dict[str, 'BoundWrapper[SubparserWrapper[Any]]'] = {}
         self._subgroups: dict[str, 'BoundWrapper[SubgroupWrapper[Any]]'] = {}
         self._arg_names: set[str] = set()
 
+        # Set up the argparse container and initialize it with the namespace
         self._container = self.configure_container()
         self._init_container(self._container, namespace_type)
 
