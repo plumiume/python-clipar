@@ -40,6 +40,15 @@ OBJECT_ATTRS = set(dir(object))
 MIXIN_ATTRIBUTES = set(dir(BaseMixin))
 MIXIN_ANNOTATIONS = get_type_hints(BaseMixin)
 
+def _bool_type(value: str) -> bool:
+    lowered = value.lower()
+    if lowered in ('true', '1', 'yes', 'on'):
+        return True
+    elif lowered in ('false', '0', 'no', 'off'):
+        return False
+    else:
+        raise ValueError(f"Cannot convert '{value}' to bool.")
+
 def _return_bool(value: bool) -> bool:
     return value
 
@@ -350,6 +359,10 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
                 flatten_union_and_literal,
                 pick_choices_are_required
             )
+
+        # Apply _bool_type for positional bool arguments
+        if type_ is bool:
+            type_ = _bool_type
 
         return self._ParseAnnotationResult(
             nargs=nargs,
