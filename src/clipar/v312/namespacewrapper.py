@@ -1,7 +1,17 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
+"""
+Namespace wrapper implementation for Python 3.12+ compatibility.
+
+This module provides the NamespaceWrapper class with enhanced type support
+and modern Python features for handling argument parsing and namespace creation.
+"""
+
 import sys
 from typing import (
     Any,
-    Iterable, Sequence,
+    Sequence,
     Callable,
     TypedDict,
 )
@@ -15,6 +25,7 @@ from .basewrapper import (
     BaseWrapper, SubparserWrapper, SubgroupWrapper,
     BoundWrapper
 )
+from . import mixin
 
 type ParentSubparserId = int
 
@@ -158,7 +169,9 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                 add_help=False,
             )
 
-    def _before_parse(self) -> Iterable[OnParseHookArgs]:
+    def _before_parse(self) -> list[OnParseHookArgs]:
+
+        recursionlimit = sys.getrecursionlimit()
 
         self.on_before_parse([], None)
 
@@ -167,11 +180,20 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             *(([name], holder) for name, holder in self._subparsers.items())
         ]
 
+        ret: list[OnParseHookArgs] = []
+
         while stack:
 
             item = stack.pop()
-            yield item
+            ret.append(item)
+
             location, holder = item
+
+            if len(location) > recursionlimit:
+                raise RecursionError(
+                    f"Recursion limit exceeded ({recursionlimit}). "
+                    f"Possible cyclic reference in namespace definition."
+                )
 
             holder.self.on_before_parse(location, holder)
 
@@ -187,7 +209,9 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
         argcomplete.autocomplete(self._parser)
 
-    def _after_parse(self, namespace: argparse.Namespace, flattens: Iterable[OnParseHookArgs]) -> NS:
+        return ret
+
+    def _after_parse(self, namespace: argparse.Namespace, flattens: list[OnParseHookArgs]) -> NS:
 
         # leaf_wrapper: SubparserWrapper[Any] = getattr(namespace, '_clipar_wrapper')
         command_chain: list[str] = list(reversed(
@@ -213,14 +237,21 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                     continue
 
             tmp_ns = holder.self.namespace_type()
-            namespace_table[holder.self] = (location, holder, tmp_ns, holder.self._arg_names)
-
             _, _, parent_ns, _ = namespace_table[holder.parent]
+
             setattr(parent_ns, holder.bound_name, tmp_ns)
 
-        for location, holder, tmp_ns, attrs in reversed(namespace_table.values()):
+            # set attribute to mixin
+            # if isinstance(any_ns, mixin.AnyMixin):
+            #     do something
+            if isinstance(parent_ns, mixin.CommandMixin):
+                parent_ns.clipar_mixin_dict['command'] = holder.bound_name
 
-            for a in attrs:
+            namespace_table[holder.self] = (location, holder, tmp_ns, holder.self._arg_names)
+
+        for location, holder, tmp_ns, arg_names in reversed(namespace_table.values()):
+
+            for a in arg_names:
                 setattr(tmp_ns, a, getattr(namespace, a))
 
             if holder is None:

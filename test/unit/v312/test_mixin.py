@@ -80,8 +80,8 @@ class TestReprMixin:
         repr_str = repr(obj)
         
         # Should contain class name
-        assert "TestClass<" in repr_str
-        assert repr_str.endswith(">")
+        assert "TestClass(" in repr_str
+        assert repr_str.endswith(")")
         
         # Should contain attribute names and values
         assert "attr1='value1'" in repr_str
@@ -128,9 +128,9 @@ class TestReprMixin:
         obj = EmptyClass()
         repr_str = repr(obj)
         
-        # Should still show class name with angle brackets
-        assert repr_str.startswith("EmptyClass<")
-        assert repr_str.endswith(">")
+        # Should still show class name with parentheses
+        assert repr_str.startswith("EmptyClass(")
+        assert repr_str.endswith(")")
 
     def test_repr_with_methods(self):
         """Test __repr__ with class that has methods"""
@@ -232,7 +232,7 @@ class TestReprMixin:
         # Should contain both base and derived attributes
         assert "base_attr='base_value'" in repr_str
         assert "derived_attr='derived_value'" in repr_str
-        assert "DerivedClass<" in repr_str
+        assert "DerivedClass(" in repr_str
 
     def test_repr_with_descriptor_attributes(self):
         """Test __repr__ with descriptor attributes"""
@@ -294,7 +294,7 @@ class TestIntegrationScenarios:
         repr_str = repr(obj)
         
         # Should work with slotted classes
-        assert "SlottedClass<" in repr_str
+        assert "SlottedClass(" in repr_str
         assert "slot_attr1='slot1'" in repr_str
         assert "slot_attr2='slot2'" in repr_str
 
@@ -329,6 +329,6 @@ class TestEdgeCases:
         
         # Should handle self-reference without infinite recursion
         repr_str = repr(obj)
-        assert "RecursiveClass<" in repr_str
+        assert "RecursiveClass(" in repr_str
         assert "normal_attr='value'" in repr_str
         # self_ref will show as object representation

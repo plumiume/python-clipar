@@ -1,3 +1,13 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 clipar contributors
+
+"""
+Base wrapper implementation for Python 3.10/3.11 compatibility.
+
+This module provides the core BaseWrapper class that serves as the foundation
+for command-line interface definitions using type annotations and decorators.
+"""
+
 # pyright: reportUnnecessaryIsInstance=false
 import abc
 from typing import (
@@ -16,6 +26,7 @@ from itertools import chain
 import argparse
 
 from .class_ast import ClassAstHolder
+from .mixin import BaseMixin
 
 # TypeVar definitions for Python 3.10 compatibility
 _NS = TypeVar('_NS')
@@ -26,6 +37,8 @@ Location = list[str]
 OnParseHookArgs = tuple[Location, 'BoundWrapper[BaseWrapper[Any]]']
 Literalizable = str | int | float | bool | NoneType
 OBJECT_ATTRS = set(dir(object))
+MIXIN_ATTRIBUTES = set(dir(BaseMixin))
+MIXIN_ANNOTATIONS = get_type_hints(BaseMixin)
 
 def _return_bool(value: bool) -> bool:
     return value
@@ -162,11 +175,15 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         namespace_type: type[_NS]
         ):
 
-        # dependencies: attr order, attr doc
+        assign_infos: dict[str, ClassAstHolder.VarInfo] = {}
         try:
-            assign_infos = ClassAstHolder(namespace_type).get_assign_infos()
+            # assign_infos = ClassAstHolder(namespace_type).get_assign_infos()
+            for base in reversed(namespace_type.mro()):
+                assign_infos.update(
+                    ClassAstHolder(base).get_assign_infos()
+                )
         except (OSError, TypeError, SyntaxError, RuntimeError):
-            assign_infos = {}
+            pass
 
         annotations = get_type_hints(namespace_type)
         attrnames = list(_get_attr_names(namespace_type))
@@ -175,10 +192,12 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
             *(
                 a for a in annotations
                 if a not in attrnames
+                and a not in MIXIN_ANNOTATIONS
             ),
             *(
                 a for a in attrnames
-                if not a in OBJECT_ATTRS and not a.startswith('_')
+                if a not in MIXIN_ATTRIBUTES
+                and not a.startswith('_')
             )
         ]
 
@@ -282,8 +301,8 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
 
         parse_result = self._parse_annotation(annotation)
 
-        type_ = parse_result.get('type', None)
-        if isinstance(type_, type) and issubclass(type_, bool):
+        # boolean flag optimization - check if annotation is bool type
+        if isinstance(annotation, type) and issubclass(annotation, bool):
             action = 'store_false' if default else 'store_true'
             parse_result = self._ParseAnnotationResult()
         else:

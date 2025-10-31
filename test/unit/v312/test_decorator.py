@@ -368,3 +368,101 @@ class TestEdgeCases:
         # New object should have merged options
         expected: ArgumentParserOptions = {"prog": "test", "add_help": True, "epilog": "New epilog"}
         assert new_obj.options == expected
+
+
+class TestBoolTypeOptimization:
+    """Test bool type flag optimization in different scenarios"""
+
+    def test_bool_with_default_false(self):
+        """Test bool type with default=False becomes store_true flag"""
+        @namespace
+        class ConfigWithBoolFalse:
+            verbose: bool = False
+        
+        # Test that --verbose flag works without requiring an argument
+        config = ConfigWithBoolFalse.parse_args(['--verbose'])
+        assert config.verbose is True
+        
+        # Test default value
+        config_default = ConfigWithBoolFalse.parse_args([])
+        assert config_default.verbose is False
+
+    def test_bool_with_default_true(self):
+        """Test bool type with default=True becomes store_false flag"""
+        @namespace
+        class ConfigWithBoolTrue:
+            debug: bool = True
+        
+        # Test that --debug flag works without requiring an argument
+        config = ConfigWithBoolTrue.parse_args(['--debug'])
+        assert config.debug is False
+        
+        # Test default value
+        config_default = ConfigWithBoolTrue.parse_args([])
+        assert config_default.debug is True
+
+    # TODO: test_bool_without_default - Future improvement needed
+    # Currently, bool type parsing from string has issues:
+    # Python's bool() converts any non-empty string to True
+    # Need custom parsing logic to handle 'False', '0', etc.
+
+    def test_multiple_bool_flags(self):
+        """Test multiple bool flags in the same namespace"""
+        @namespace
+        class ConfigWithMultipleBools:
+            verbose: bool = False
+            debug: bool = False
+            quiet: bool = True
+        
+        # Test combination of flags
+        config = ConfigWithMultipleBools.parse_args(['--verbose', '--quiet'])
+        assert config.verbose is True
+        assert config.debug is False
+        assert config.quiet is False
+
+    def test_bool_flag_with_other_types(self):
+        """Test bool flags work correctly alongside other argument types"""
+        @namespace
+        class MixedTypeConfig:
+            name: str = "default"
+            verbose: bool = False
+            count: int = 1
+        
+        # Test bool flag with other arguments
+        config = MixedTypeConfig.parse_args([
+            '--name', 'test',
+            '--verbose',
+            '--count', '5'
+        ])
+        assert config.name == 'test'
+        assert config.verbose is True
+        assert config.count == 5
+
+    def test_bool_positional_argument(self):
+        """Test bool type as positional argument with proper string conversion."""
+        @namespace
+        class ConfigWithBoolPositional:
+            enabled: bool
+        
+        # Test 'true' conversion
+        config = ConfigWithBoolPositional.parse_args(['true'])
+        assert config.enabled is True
+        
+        # Test 'false' conversion
+        config = ConfigWithBoolPositional.parse_args(['false'])
+        assert config.enabled is False
+        
+        # Test '1' conversion
+        config = ConfigWithBoolPositional.parse_args(['1'])
+        assert config.enabled is True
+        
+        # Test '0' conversion
+        config = ConfigWithBoolPositional.parse_args(['0'])
+        assert config.enabled is False
+        
+        # Test case-insensitive
+        config = ConfigWithBoolPositional.parse_args(['TRUE'])
+        assert config.enabled is True
+        
+        config = ConfigWithBoolPositional.parse_args(['FALSE'])
+        assert config.enabled is False
