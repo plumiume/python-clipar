@@ -37,6 +37,14 @@ PositionedAnnInfo = tuple[FlattenAnnInfo, Callable[[str], object], bool, int]
 # MIXIN_ATTRIBUTES = set(dir(BaseMixin))
 # MIXIN_ANNOTATIONS = get_type_hints(BaseMixin)
 
+def _bool_type(value: str) -> bool:
+    lowered = value.lower()
+    if lowered in ('true', '1', 'yes', 'on'):
+        return True
+    elif lowered in ('false', '0', 'no', 'off'):
+        return False
+    else:
+        raise ValueError(f"Cannot convert '{value}' to bool.")
 
 def _return_bool(value: bool) -> bool:
     return value
@@ -481,6 +489,9 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             else:
                 # type_fn = self._multi_type_builder(flatten_annotations)
                 type_fn = self._MultiTypeFn(flatten_annotations)
+
+            if type_fn is bool:
+                type_fn = _bool_type
 
             is_limited = all(
                 ann_only for ann_only, _ in flatten_annotations.values()
