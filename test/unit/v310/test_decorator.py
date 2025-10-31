@@ -437,3 +437,33 @@ class TestBoolTypeOptimization:
         assert config.name == 'test'
         assert config.verbose is True
         assert config.count == 5
+
+    def test_bool_positional_argument(self):
+        """Test bool type as positional argument with proper string conversion."""
+        @namespace
+        class ConfigWithBoolPositional:
+            enabled: bool
+        
+        # Test 'true' conversion
+        config = ConfigWithBoolPositional.parse_args(['true'])
+        assert config.enabled is True
+        
+        # Test 'false' conversion
+        config = ConfigWithBoolPositional.parse_args(['false'])
+        assert config.enabled is False
+        
+        # Test '1' conversion
+        config = ConfigWithBoolPositional.parse_args(['1'])
+        assert config.enabled is True
+        
+        # Test '0' conversion
+        config = ConfigWithBoolPositional.parse_args(['0'])
+        assert config.enabled is False
+        
+        # Test case-insensitive
+        config = ConfigWithBoolPositional.parse_args(['TRUE'])
+        assert config.enabled is True
+        
+        config = ConfigWithBoolPositional.parse_args(['FALSE'])
+        assert config.enabled is False
+
