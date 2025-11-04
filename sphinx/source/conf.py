@@ -22,8 +22,6 @@ try:
     release = get_version("clipar")
     # Extract author from metadata (handle cases where it might be None)
     author_from_metadata = pkg_metadata.get("Author", "ikeda")
-    if author_from_metadata is None:
-        author_from_metadata = "ikeda"
 except Exception:
     # Fallback values if metadata is not available
     release = "0.2.3"
@@ -65,7 +63,7 @@ napoleon_type_aliases = None
 napoleon_attr_annotations = True
 
 # Autodoc settings
-autodoc_default_options = {
+autodoc_default_options: dict[str, object] = {
     "members": True,
     "member-order": "bysource",
     "special-members": "__init__",

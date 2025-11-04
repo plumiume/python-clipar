@@ -1,20 +1,45 @@
 [project]
 name = "clipar"
-version = "0.2.3"
-description = "Add your description here"
+dynamic = ["version"]
+description = "A modern Python library for building CLI applications using type annotations and decorators"
 readme = "README.md"
 authors = [
     { name = "ikeda", email = "ikeda@lee-lab.org" }
 ]
 requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["cli", "argparse", "type-hints", "decorator", "command-line"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Shells",
+    "Typing :: Typed",
+]
 dependencies = [
     "argcomplete>=3.6.2",
     "typing-extensions>=4.14.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/plumiume/python-clipar"
+Documentation = "https://github.com/plumiume/python-clipar#readme"
+Repository = "https://github.com/plumiume/python-clipar.git"
+Issues = "https://github.com/plumiume/python-clipar/issues"
+Changelog = "https://github.com/plumiume/python-clipar/releases"
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
 
 [dependency-groups]
 dev = [
