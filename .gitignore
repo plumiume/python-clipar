@@ -19,3 +19,8 @@ uv*.lock
 
 # VS Code settings
 .vscode/
+
+# Sphinx documentation
+docs/html/
+sphinx/source/api/generated/
+.doctrees/

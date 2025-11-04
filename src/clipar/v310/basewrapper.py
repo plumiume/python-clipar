@@ -261,6 +261,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         name: str,
         wrapper: 'SubparserWrapper[Any] | SubgroupWrapper[Any]'
         ):
+        """Register a subparser or subgroup wrapper with the specified name."""
 
         wrapper.on_before_bind(name, self)
 
@@ -288,6 +289,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         annotation: type | UnionType | GenericAliasLike,
         doc: str | None
         ):
+        """Add a required positional argument to the container."""
 
         parse_result = self._parse_annotation(annotation)
 
@@ -305,6 +307,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         default: object,
         doc: str | None
         ):
+        """Add an optional argument with default value to the container."""
 
         name_or_flag = '--' + name.replace('_', '-')
 
@@ -330,6 +333,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         self,
         annotation: GenericAliasLike | UnionType | type
         ) -> _ParseAnnotationResult:
+        """Parse type annotation and extract argparse configuration."""
 
         nargs, annotation_args = self._determine_nargs_and_generic_args(annotation)
 
@@ -443,6 +447,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
             GenericAliasLike | type,
             list[GenericAliasLike | type | Literalizable]
         ]:
+        """Flatten Union and Literal type annotations into a normalized dictionary."""
 
         union_args = list(chain.from_iterable(
             ann.__args__
@@ -634,26 +639,27 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         exclusive group decorators.
         
         Args:
-            name: The identifier for the wrapper. This becomes the subcommand name
+            name :code:`(str)`: The identifier for the wrapper. This becomes the subcommand name
                 for subparsers or the group identifier for subgroups.
-            wrapper: The wrapper instance to add. Must be either a SubparserWrapper
-                (e.g., from @namespace decorator) or SubgroupWrapper (e.g., from 
-                @group or @mutually_exclusive_group decorators).
+            wrapper :code:`(SubparserWrapper[Any] | SubgroupWrapper[Any])`: The wrapper instance
+                to add. Must be either a :class:`SubparserWrapper` (e.g., from ``@namespace``
+                decorator) or :class:`SubgroupWrapper` (e.g., from ``@group`` or
+                ``@mutually_exclusive_group`` decorators).
         
         Raises:
-            TypeError: If the wrapper type is not SubparserWrapper or SubgroupWrapper.
+            TypeError: If the wrapper type is not :class:`SubparserWrapper` or :class:`SubgroupWrapper`.
         
         Note:
-            - Calls binding hooks (on_before_bind, on_after_bind) during registration
-            - Creates a BoundWrapper instance to manage the relationship
+            - Calls binding hooks (:meth:`on_before_bind`, :meth:`on_after_bind`) during registration
+            - Creates a :class:`BoundWrapper` instance to manage the relationship
             - Enables aliasing by allowing the same wrapper to be added with different names
-            - For @namespace wrappers: Creates independent subcommands where only the
-              selected subcommand becomes active (others remain NotSelected)
-            - For @group/@mutually_exclusive_group wrappers: All arguments are flattened
+            - For ``@namespace`` wrappers: Creates independent subcommands where only the
+              selected subcommand becomes active (others remain :data:`NotSelected`)
+            - For ``@group``/``@mutually_exclusive_group`` wrappers: All arguments are flattened
               to the top level, and aliasing may cause argument name conflicts
         
-        Example:
-            ```python
+        Example::
+        
             # Add a database configuration group
             database_group = GroupWrapper(DatabaseConfig) 
             main_wrapper.add_wrapper("database", database_group)
@@ -664,7 +670,6 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
             
             # Create alias (works for namespaces, may conflict for groups)
             main_wrapper.add_wrapper("cfg", config_ns)
-            ```
         """
 
         self._add_wrapper(self._container, name, wrapper)

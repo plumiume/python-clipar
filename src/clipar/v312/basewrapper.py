@@ -336,6 +336,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         name: str,
         wrapper: 'SubparserWrapper[Any] | SubgroupWrapper[Any]'
         ):
+        """Register a subparser or subgroup wrapper with the specified name."""
 
         wrapper.on_before_bind(name, self)
 
@@ -364,6 +365,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         annotation: type | UnionType | GenericAliasLike,
         doc: str | None
         ):
+        """Add a required positional argument to the container."""
 
         parse_result = self._parse_annotation(annotation)
 
@@ -381,6 +383,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         default: object,
         doc: str | None
         ):
+        """Add an optional argument with default value to the container."""
 
         name_or_flag = '--' + name.replace('_', '-')
 
@@ -418,6 +421,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         self,
         annotation: GenericAliasLike | UnionType | type
         ) -> _ParseAnnotationResult:
+        """Parse type annotation and extract argparse configuration."""
 
         result = self._ParseAnnotationResult()
 
@@ -452,6 +456,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             int | Literal['?', '*', '+'] | None,
             tuple[GenericAliasLike | type | None, ...]
         ]:
+        """Determine nargs value and extract generic type arguments from annotation."""
 
         tp_origin = get_origin(annotation)
         tp_args = get_args(annotation)
@@ -481,32 +486,34 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         self,
         annotation_args: tuple[GenericAliasLike | UnionType | type | None, ...]
         ) -> PositionedAnnInfo:
+        """Parse positioned annotation information from annotation arguments."""
 
-            flatten_annotations = self._flatten_union_and_literal(annotation_args)
+        flatten_annotations = self._flatten_union_and_literal(annotation_args)
 
-            if len(flatten_annotations) == 1:
-                type_fn = _get_type_origin(next(iter(flatten_annotations)))
-            else:
-                # type_fn = self._multi_type_builder(flatten_annotations)
-                type_fn = self._MultiTypeFn(flatten_annotations)
+        if len(flatten_annotations) == 1:
+            type_fn = _get_type_origin(next(iter(flatten_annotations)))
+        else:
+            # type_fn = self._multi_type_builder(flatten_annotations)
+            type_fn = self._MultiTypeFn(flatten_annotations)
 
-            if type_fn is bool:
-                type_fn = _bool_type
+        if type_fn is bool:
+            type_fn = _bool_type
 
-            is_limited = all(
-                ann_only for ann_only, _ in flatten_annotations.values()
-            )
+        is_limited = all(
+            ann_only for ann_only, _ in flatten_annotations.values()
+        )
 
-            flatten_len = sum(
-                len(lits) for _, lits in flatten_annotations.values()
-            )
+        flatten_len = sum(
+            len(lits) for _, lits in flatten_annotations.values()
+        )
 
-            return (flatten_annotations, type_fn, is_limited, flatten_len)
+        return (flatten_annotations, type_fn, is_limited, flatten_len)
 
     def _flatten_union_and_literal(
         self,
         annotations: tuple[GenericAliasLike | UnionType | type | None, ...]
         ) -> FlattenAnnInfo:
+        """Flatten Union and Literal type annotations into a normalized dictionary."""
 
         union_args = list(chain.from_iterable(
             ann.__args__
@@ -561,6 +568,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         return ret
 
     class _MultiTypeFn:
+        """Type conversion function that tries multiple types in sequence."""
 
         def __init__(self, flatten_ann: FlattenAnnInfo):
             self._info = flatten_ann
@@ -588,6 +596,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             )
 
     class _DefaultNargsInfo:
+        """Helper class for default nargs argument parsing metadata."""
 
         def __init__(self, pos_ann_info: PositionedAnnInfo):
             self._info = pos_ann_info
@@ -618,6 +627,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             ))
 
     class _FixedIntNargsInfo:
+        """Helper class for fixed-count nargs argument parsing metadata."""
 
         def __init__(self, pos_ann_infos: list[PositionedAnnInfo]):
             self._infos = pos_ann_infos
@@ -709,26 +719,27 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         exclusive group decorators.
         
         Args:
-            name: The identifier for the wrapper. This becomes the subcommand name
+            name :code:`(str)`: The identifier for the wrapper. This becomes the subcommand name
                 for subparsers or the group identifier for subgroups.
-            wrapper: The wrapper instance to add. Must be either a SubparserWrapper
-                (e.g., from @namespace decorator) or SubgroupWrapper (e.g., from 
-                @group or @mutually_exclusive_group decorators).
+            wrapper :code:`(SubparserWrapper[Any] | SubgroupWrapper[Any])`: The wrapper instance
+                to add. Must be either a :class:`SubparserWrapper` (e.g., from ``@namespace``
+                decorator) or :class:`SubgroupWrapper` (e.g., from ``@group`` or
+                ``@mutually_exclusive_group`` decorators).
         
         Raises:
-            TypeError: If the wrapper type is not SubparserWrapper or SubgroupWrapper.
+            TypeError: If the wrapper type is not :class:`SubparserWrapper` or :class:`SubgroupWrapper`.
         
         Note:
-            - Calls binding hooks (on_before_bind, on_after_bind) during registration
-            - Creates a BoundWrapper instance to manage the relationship
+            - Calls binding hooks (:meth:`on_before_bind`, :meth:`on_after_bind`) during registration
+            - Creates a :class:`BoundWrapper` instance to manage the relationship
             - Enables aliasing by allowing the same wrapper to be added with different names
-            - For @namespace wrappers: Creates independent subcommands where only the
-              selected subcommand becomes active (others remain NotSelected)
-            - For @group/@mutually_exclusive_group wrappers: All arguments are flattened
+            - For ``@namespace`` wrappers: Creates independent subcommands where only the
+              selected subcommand becomes active (others remain :data:`NotSelected`)
+            - For ``@group``/``@mutually_exclusive_group`` wrappers: All arguments are flattened
               to the top level, and aliasing may cause argument name conflicts
         
-        Example:
-            ```python
+        Example::
+        
             # Add a database configuration group
             database_group = GroupWrapper(DatabaseConfig) 
             main_wrapper.add_wrapper("database", database_group)
@@ -739,7 +750,6 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             
             # Create alias (works for namespaces, may conflict for groups)
             main_wrapper.add_wrapper("cfg", config_ns)
-            ```
         """
 
         self._add_wrapper(self._container, name, wrapper)
@@ -749,6 +759,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         Create a deep copy of this wrapper instance.
         
         This method creates a complete independent copy of the wrapper, including:
+        
         - All configuration and state
         - Nested subparsers and subgroups
         - Argument definitions and their metadata
@@ -758,16 +769,16 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         but operates independently - modifications to one wrapper won't affect the other.
         
         Returns:
-            Self: A new wrapper instance that is a deep copy of this one.
+            :code:`Self`: A new wrapper instance that is a deep copy of this one.
         
         Note:
-            - The namespace_type reference is preserved (not deep copied)
+            - The ``namespace_type`` reference is preserved (not deep copied)
             - All nested wrappers are recursively deep copied
             - Container state is reconstructed during copy
             - Useful for creating template wrappers or backup configurations
         
-        Example:
-            ```python
+        Example::
+        
             original_wrapper = NamespaceWrapper(MyConfig)
             original_wrapper.add_wrapper("sub", SubWrapper(SubConfig))
             
@@ -776,7 +787,6 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             
             # Modifications to copy don't affect original
             copied_wrapper.add_wrapper("new_sub", AnotherWrapper(AnotherConfig))
-            ```
         """
         from copy import deepcopy
         return deepcopy(self)

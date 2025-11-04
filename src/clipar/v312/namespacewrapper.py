@@ -291,20 +291,21 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         Examples:
             Basic argument parsing:
             
-            ```python
-            @namespace
-            class Config:
-                input_file: str
-                verbose: bool = False
-            
-            # Parse from sys.argv
-            config = Config.parse_args()
-            
-            # Parse specific arguments
-            config = Config.parse_args(['data.txt', '--verbose'])
-            # config.input_file == 'data.txt'
-            # config.verbose == True
-            ```
+            .. code-block:: python
+
+                            @namespace
+                            class Config:
+                                input_file: str
+                                verbose: bool = False
+
+                            # Parse from sys.argv
+                            config = Config.parse_args()
+
+                            # Parse specific arguments
+                            config = Config.parse_args(['data.txt', '--verbose'])
+                            # config.input_file == 'data.txt'
+                            # config.verbose == True
+
         """
         flattens = self._before_parse()
         namespace = self._parser.parse_args(args)
@@ -336,19 +337,20 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         Examples:
             Handling mixed known and unknown arguments:
             
-            ```python
-            @namespace
-            class Config:
-                input_file: str
-                verbose: bool = False
-            
-            config, unknown = Config.parse_known_args([
-                'data.txt', '--verbose', '--unknown-flag', 'extra'
-            ])
-            # config.input_file == 'data.txt'
-            # config.verbose == True
-            # unknown == ['--unknown-flag', 'extra']
-            ```
+            .. code-block:: python
+
+                            @namespace
+                            class Config:
+                                input_file: str
+                                verbose: bool = False
+
+                            config, unknown = Config.parse_known_args([
+                                'data.txt', '--verbose', '--unknown-flag', 'extra'
+                            ])
+                            # config.input_file == 'data.txt'
+                            # config.verbose == True
+                            # unknown == ['--unknown-flag', 'extra']
+
         """
         flattens = self._before_parse()
         namespace, unknown_args = self._parser.parse_known_args(args)
@@ -381,22 +383,23 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         Examples:
             Intermixed argument parsing:
             
-            ```python
-            @namespace
-            class Config:
-                command: str
-                files: list[str]
-                verbose: bool = False
-            
-            # Traditional: command files --verbose
-            # Intermixed: command --verbose files
-            config = Config.parse_intermixed_args([
-                'process', '--verbose', 'file1.txt', 'file2.txt'
-            ])
-            # config.command == 'process'
-            # config.verbose == True
-            # config.files == ['file1.txt', 'file2.txt']
-            ```
+            .. code-block:: python
+
+                            @namespace
+                            class Config:
+                                command: str
+                                files: list[str]
+                                verbose: bool = False
+
+                            # Traditional: command files --verbose
+                            # Intermixed: command --verbose files
+                            config = Config.parse_intermixed_args([
+                                'process', '--verbose', 'file1.txt', 'file2.txt'
+                            ])
+                            # config.command == 'process'
+                            # config.verbose == True
+                            # config.files == ['file1.txt', 'file2.txt']
+
         """
         flattens = self._before_parse()
         namespace = self._parser.parse_intermixed_args(args)
@@ -429,19 +432,20 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         Examples:
             Intermixed parsing with unknown arguments:
             
-            ```python
-            @namespace
-            class Config:
-                command: str
-                verbose: bool = False
-            
-            config, unknown = Config.parse_known_intermixed_args([
-                'process', '--verbose', '--unknown', 'value', 'extra'
-            ])
-            # config.command == 'process'
-            # config.verbose == True
-            # unknown == ['--unknown', 'value', 'extra']
-            ```
+            .. code-block:: python
+
+                            @namespace
+                            class Config:
+                                command: str
+                                verbose: bool = False
+
+                            config, unknown = Config.parse_known_intermixed_args([
+                                'process', '--verbose', '--unknown', 'value', 'extra'
+                            ])
+                            # config.command == 'process'
+                            # config.verbose == True
+                            # unknown == ['--unknown', 'value', 'extra']
+
         """
         flattens = self._before_parse()
         namespace, unknown_args = self._parser.parse_known_intermixed_args(args)
@@ -466,24 +470,25 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             `(NS) -> R`: The registered callback function.
 
         Example:
-            ```python
-            @namespace
-            class Config:
-                input_file: str
-                verbose: bool = False
+            .. code-block:: python
 
-            @Config.callback
-            def post_process(config: Config.T):
-                # Delayed import is recommended: import inside the function if needed
-                if config.verbose:
-                    # Verbose mode enabled. Input file: config.input_file
-                    pass
-                return config
+                            @namespace
+                            class Config:
+                                input_file: str
+                                verbose: bool = False
 
-            config = Config.parse_args()
-            # post_process will be called automatically after parsing
-            # config is now available
-            ```
+                            @Config.callback
+                            def post_process(config: Config.T):
+                                # Delayed import is recommended: import inside the function if needed
+                                if config.verbose:
+                                    # Verbose mode enabled. Input file: config.input_file
+                                    pass
+                                return config
+
+                            config = Config.parse_args()
+                            # post_process will be called automatically after parsing
+                            # config is now available
+
         """
 
         self._set_callback(func)
