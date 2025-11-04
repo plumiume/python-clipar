@@ -2,9 +2,13 @@
 
 import argparse
 import pytest
+import sys
 from typing import Literal
 from clipar import namespace, group, mutually_exclusive_group, NotSelected
 from clipar import mixin
+
+# Python 3.14+ disallows nested argument groups
+PYTHON_314_PLUS = sys.version_info >= (3, 14)
 
 
 class TestBasicNamespace:
@@ -160,6 +164,7 @@ class TestGroupFunctionality:
         assert config.database.username == "produser"
         assert config.database.password == "secret"  # default value
 
+    @pytest.mark.skipif(PYTHON_314_PLUS, reason="Python 3.14+ disallows nested argument groups")
     def test_nested_groups(self):
         """Test nested group functionality - argparse flattens all arguments to top level"""
         @group
@@ -179,7 +184,8 @@ class TestGroupFunctionality:
             logging = LoggingConfig
             timeout: int = 30
 
-        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+        # Python < 3.14 emits DeprecationWarning for nested groups
+        with pytest.warns(DeprecationWarning):
             @namespace
             class CompleteConfig:
                 app_name: str
@@ -709,6 +715,7 @@ class TestNestedDecorators:
         assert config.inner.database_url == "prod.db.com:3306"
         assert config.inner.debug is True
 
+    @pytest.mark.skipif(PYTHON_314_PLUS, reason="Python 3.14+ disallows nested argument groups")
     def test_nested_group_decorators(self):
         """Test nested @group decorators"""
         @group
@@ -722,7 +729,8 @@ class TestNestedDecorators:
             port: int = 5432
             credentials = DatabaseCredentials
 
-        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+        # Python < 3.14 emits DeprecationWarning for nested groups
+        with pytest.warns(DeprecationWarning):
             @namespace
             class ApplicationConfig:
                 service_name: str
@@ -816,6 +824,7 @@ class TestNestedDecorators:
         assert config.server.security.auth_type.oauth is True
         assert config.server.security.auth_type.apikey is False
 
+    @pytest.mark.skipif(PYTHON_314_PLUS, reason="Python 3.14+ disallows nested argument groups")
     def test_deeply_nested_groups(self):
         """Test deeply nested group structures"""
         @group
@@ -833,7 +842,8 @@ class TestNestedDecorators:
             level2 = Level2Config
             setting_d: str = "root_setting"
 
-        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+        # Python < 3.14 emits DeprecationWarning for nested groups
+        with pytest.warns(DeprecationWarning):
             @namespace
             class RootConfig:
                 name: str
@@ -1026,6 +1036,7 @@ class TestInnerClassDecorators:
                 app_name: str
                 server = ServerGroup
 
+    @pytest.mark.skipif(PYTHON_314_PLUS, reason="Python 3.14+ disallows nested argument groups")
     def test_group_with_inner_group_class(self):
         """Test @group class containing @group inner class"""
         @group
@@ -1039,7 +1050,8 @@ class TestInnerClassDecorators:
                 password: str = "secret"
                 timeout: int = 30
 
-        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+        # Python < 3.14 emits DeprecationWarning for nested groups
+        with pytest.warns(DeprecationWarning):
             @namespace
             class AppConfig:
                 app_name: str
@@ -1063,6 +1075,7 @@ class TestInnerClassDecorators:
         assert config.database.credentials.password == "prodpass"
         assert config.database.credentials.timeout == 60
 
+    @pytest.mark.skipif(PYTHON_314_PLUS, reason="Python 3.14+ disallows nested argument groups")
     def test_mutually_exclusive_group_with_inner_group_class(self):
         """Test @mutually_exclusive_group class containing @group inner class"""
         @mutually_exclusive_group
@@ -1076,7 +1089,8 @@ class TestInnerClassDecorators:
                 quote_char: str = '"'
                 escape_char: str = "\\"
 
-        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+        # Python < 3.14 emits DeprecationWarning for nested groups
+        with pytest.warns(DeprecationWarning):
             @namespace
             class ProcessorConfig:
                 input_file: str
@@ -1098,9 +1112,11 @@ class TestInnerClassDecorators:
         assert config.output.custom.quote_char == "'"
         assert config.output.custom.escape_char == "\\"  # default
 
+    @pytest.mark.skipif(PYTHON_314_PLUS, reason="Python 3.14+ disallows nested argument groups")
     def test_complex_nested_inner_classes(self):
         """Test complex nesting with multiple levels of inner classes"""
-        with pytest.warns(DeprecationWarning, match="Nesting argument groups is deprecated"):
+        # Python < 3.14 emits DeprecationWarning for nested groups
+        with pytest.warns(DeprecationWarning):
             @namespace
             class ComplexConfig:
                 application_name: str
