@@ -333,6 +333,34 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
 
         nargs, annotation_args = self._determine_nargs_and_generic_args(annotation)
 
+        # Handle fixed-length tuple (nargs is int)
+        if isinstance(nargs, int):
+            type_fns: list[Callable[[str], object]] = []
+            for arg in annotation_args:
+                flatten = self._flatten_union_and_literal((arg,))
+                if len(flatten) == 1:
+                    ann = next(iter(flatten.keys()))
+                    type_fn = self._get_type_from_type_or_generic_alias(ann)
+                else:
+                    pick_choices = [
+                        all(isinstance(a, Literalizable) for a in lits)
+                        for lits in flatten.values()
+                    ]
+                    type_fn = self._multi_type_builder(flatten, pick_choices)
+                
+                # Apply _bool_type for positional bool arguments
+                if type_fn is bool:
+                    type_fn = _bool_type
+                
+                type_fns.append(type_fn)
+            
+            type_ = self._fixed_tuple_type_builder(type_fns)
+            return self._ParseAnnotationResult(
+                nargs=nargs,
+                type=type_,
+                choices=None
+            )
+
         flatten_union_and_literal = self._flatten_union_and_literal(annotation_args)
 
         pick_choices_are_required = [
@@ -432,18 +460,42 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
             for ann in union_args
         ))
 
+        # Original implementation (dictionary comprehension) - preserves insertion order
+        # but processes types before literals, which can break Union type order
+        # ret: dict[
+        #     type | GenericAliasLike,
+        #     list[type | GenericAliasLike | Literalizable]
+        # ] = {
+        #     ann: [ann]
+        #     for ann in literal_args
+        #     if isinstance(ann, type | GenericAliasLike)
+        # }
+        #
+        # for ann in literal_args:
+        #     if isinstance(ann, Literalizable):
+        #         ret.setdefault(type(ann), []).append(ann)
+        #
+        # return ret
+
+        # New implementation - preserves literal_args order for Union type order
         ret: dict[
             type | GenericAliasLike,
             list[type | GenericAliasLike | Literalizable]
-        ] = {
-            ann: [ann]
-            for ann in literal_args
-            if isinstance(ann, type | GenericAliasLike)
-        }
+        ] = {}
 
         for ann in literal_args:
-            if isinstance(ann, Literalizable):
-                ret.setdefault(type(ann), []).append(ann)
+            if isinstance(ann, type | GenericAliasLike):
+                if ann in ret:
+                    ret[ann] = ret[ann]
+                else:
+                    ret[ann] = [ann]
+            elif isinstance(ann, Literalizable):
+                ann_type = type(ann)
+                ret.setdefault(ann_type, []).append(ann)
+            else:
+                raise ValueError(
+                    f"Annotation {ann} is not a valid type or literal."
+                )
 
         return ret
 
@@ -473,9 +525,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
                         continue
 
                     if pick_choices and inst not in literals:
-                        raise ValueError(
-                            f"Value '{value}' is not in choices {literals}."
-                        )
+                        continue # try next type
 
                     return inst
 
@@ -483,6 +533,27 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
                     f"Cannot convert value '{value}' to any of the types: "
                     f"{', '.join(str(ann) for ann in flatten_union_and_literal.keys())}."
                 )
+        return type_impl
+
+    def _fixed_tuple_type_builder(
+        self,
+        type_fns: list[Callable[[str], object]]
+        ):
+        """Build a type converter for fixed-length tuples.
+        
+        Each element in the tuple gets its own type converter.
+        This is similar to v312's _FixedIntNargsInfo but simpler.
+        """
+        type_fn_iter = iter(type_fns)
+        
+        def type_impl(value: str) -> object:
+            type_fn = next(type_fn_iter, None)
+            if type_fn is None:
+                raise ValueError(
+                    f"Too many arguments provided (expected {len(type_fns)})."
+                )
+            return type_fn(value)
+        
         return type_impl
 
     def _get_type_from_type_or_generic_alias(

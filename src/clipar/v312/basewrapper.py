@@ -524,18 +524,39 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             for ann in union_args
         ))
 
+        # ret: dict[
+        #     type | GenericAliasLike,
+        #     tuple[bool, list[Literalizable]]
+        # ] = {
+        #     ann: (False, [])
+        #     for ann in literal_args
+        #     if isinstance(ann, type | GenericAliasLike)
+        # }
+
+        # for ann in literal_args:
+        #     if isinstance(ann, Literalizable):
+        #         ret.setdefault(type(ann), (True, []))[1].append(ann)
+
+        # return ret
+
         ret: dict[
             type | GenericAliasLike,
             tuple[bool, list[Literalizable]]
-        ] = {
-            ann: (False, [])
-            for ann in literal_args
-            if isinstance(ann, type | GenericAliasLike)
-        }
+        ] = {}
 
         for ann in literal_args:
-            if isinstance(ann, Literalizable):
-                ret.setdefault(type(ann), (True, []))[1].append(ann)
+            if isinstance(ann, type | GenericAliasLike):
+                if ann in ret:
+                    ret[ann] = (False, ret[ann][1])
+                else:
+                    ret[ann] = (False, [])
+            elif isinstance(ann, Literalizable):
+                ann_type = type(ann)
+                ret.setdefault(ann_type, (True, []))[1].append(ann)
+            else:
+                raise ValueError(
+                    f"Annotation {ann} is not a valid type or literal."
+                )
 
         return ret
 
@@ -556,11 +577,15 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
                     continue # try next type
 
                 if limited and inst not in lits:
-                    raise ValueError(
-                        f"Value '{value}' is not in choices {lits}."
-                    )
+                    continue # try next type
 
                 return inst
+
+            # All types failed
+            raise ValueError(
+                f"Cannot convert value '{value}' to any of the types: "
+                f"{', '.join(str(ann) for ann in self._info.keys())}."
+            )
 
     class _DefaultNargsInfo:
 

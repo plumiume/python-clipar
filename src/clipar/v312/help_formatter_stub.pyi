@@ -7,7 +7,8 @@ argparse.HelpFormatter の内部メソッドとAPI構造を理解するための
 
 from __future__ import annotations
 from typing import Any, Callable, Iterable, Pattern
-from argparse import Action, _MutuallyExclusiveGroup
+from argparse import Action
+from argparse import _MutuallyExclusiveGroup # type: ignore
 
 
 class HelpFormatter:
