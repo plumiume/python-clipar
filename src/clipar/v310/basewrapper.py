@@ -21,6 +21,11 @@ from typing import (
 from typing_extensions import Self, Unpack
 from types import UnionType, EllipsisType, NoneType
 from enum import Enum
+import sys
+if sys.version_info >= (3, 12):
+    from typing import TypeAliasType
+else:
+    from typing_extensions import TypeAliasType
 
 from itertools import chain
 import argparse
@@ -328,7 +333,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
 
     def _parse_annotation(
         self,
-        annotation: GenericAliasLike | UnionType | type
+        annotation: TypeAliasType | GenericAliasLike | UnionType | type
         ) -> _ParseAnnotationResult:
 
         nargs, annotation_args = self._determine_nargs_and_generic_args(annotation)
@@ -372,19 +377,25 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
 
     def _determine_nargs_and_generic_args(
         self,
-        annotation: GenericAliasLike | UnionType | type
+        annotation: TypeAliasType | GenericAliasLike | UnionType | type
         ) -> tuple[
-            int | Literal['?', '*', '+'] | None,
+            int | Literal["?", "*", "+"] | None,
             tuple[GenericAliasLike | type | None, ...]
         ]:
 
-        tp_origin = get_origin(annotation)
-        tp_args = get_args(annotation)
+        core_ann = (
+            self._resolve_type_alias_type(annotation)
+            if isinstance(annotation, TypeAliasType)
+            else annotation
+        )
 
-        if isinstance(annotation, type):
-            return None, (annotation, )
+        tp_origin = get_origin(core_ann)
+        tp_args = get_args(core_ann)
 
-        if isinstance(annotation, UnionType):
+        if isinstance(core_ann, type):
+            return None, (core_ann, )
+
+        if isinstance(core_ann, UnionType):
             return None, tp_args
 
         if tp_origin in (Literal, Union):
@@ -392,7 +403,7 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
 
         if not isinstance(tp_origin, type):
             raise TypeError(
-                f"Annotation {annotation} has invalid origin {tp_origin}."
+                f"Annotation {core_ann} has invalid origin {tp_origin}."
             )
 
         no_ellipsis_args = tuple(a for a in tp_args if a is not ...)
@@ -406,7 +417,13 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         if issubclass(tp_origin, Sequence):
             return '*', no_ellipsis_args
 
-        return None, (annotation, )
+        return None, (core_ann, )
+    
+    def _resolve_type_alias_type(self, type_alias_type: Any) -> Any:
+        """Resolve TypeAliasType to its underlying type."""
+        while isinstance(type_alias_type, TypeAliasType):
+            type_alias_type = type_alias_type.__value__  # type: ignore
+        return type_alias_type
 
     def _flatten_union_and_literal(
         self,

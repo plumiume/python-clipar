@@ -3,6 +3,7 @@
 # pyright: reportPrivateUsage=false
 
 from typing import TypeVar
+import sys
 import pytest
 import argparse
 from unittest.mock import Mock, patch
@@ -14,7 +15,15 @@ from clipar.v310.basewrapper import (
     ArgumentContainerProtocol, GenericAliasLike,
     OBJECT_ATTRS
 )
+
+if sys.version_info >= (3, 12):
+    from typing import TypeAliasType
+else:
+    from typing_extensions import TypeAliasType
 from types import UnionType
+
+UserId = TypeAliasType("UserId", int)
+CustomStr = TypeAliasType("CustomStr", str)
 
 _NS = TypeVar('_NS')
 
@@ -302,6 +311,63 @@ class TestBaseWrapper:
             result = wrapper._flatten_union_and_literal((str, int, literal_type))
             assert str in result
             assert int in result
+    
+    def test_parse_annotation_with_type_alias(self):
+        """Test _parse_annotation with TypeAliasType from typing_extensions"""
+        try:
+            class ConcreteWrapper(BaseWrapper[_NS]):
+                def configure_container(self):
+                    return Mock(spec=ArgumentContainerProtocol)
+            
+            with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
+                mock_ast.return_value.get_assign_infos.return_value = {}
+                
+                wrapper = ConcreteWrapper(MockNamespace)
+                result = wrapper._parse_annotation(UserId)
+                assert 'type' in result
+                assert callable(result['type'])
+                assert result['type']("42") == 42
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
+    
+    def test_determine_nargs_and_generic_args_with_type_alias(self):
+        """Test _determine_nargs_and_generic_args with TypeAliasType"""
+        try:
+            class ConcreteWrapper(BaseWrapper[_NS]):
+                def configure_container(self):
+                    return Mock(spec=ArgumentContainerProtocol)
+            
+            with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
+                mock_ast.return_value.get_assign_infos.return_value = {}
+                
+                wrapper = ConcreteWrapper(MockNamespace)
+                nargs, args = wrapper._determine_nargs_and_generic_args(CustomStr)
+                assert nargs is None
+                assert args == (str,)
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
+    
+    def test_flatten_union_and_literal_with_type_alias(self):
+        """Test _flatten_union_and_literal with type alias"""
+        try:
+            from typing_extensions import TypeAliasType
+            Username = TypeAliasType("Username", str)
+            
+            class ConcreteWrapper(BaseWrapper[_NS]):
+                def configure_container(self):
+                    return Mock(spec=ArgumentContainerProtocol)
+            
+            with patch('clipar.v310.basewrapper.ClassAstHolder') as mock_ast:
+                mock_ast.return_value.get_assign_infos.return_value = {}
+                
+                wrapper = ConcreteWrapper(MockNamespace)
+                
+                # Test with type alias in a tuple
+                result = wrapper._flatten_union_and_literal((str, Username))
+                # Type alias should be handled without error
+                assert str in result
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
     
     def test_get_type_from_type_or_generic_alias(self):
         """Test _get_type_from_type_or_generic_alias method"""

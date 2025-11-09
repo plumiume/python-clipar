@@ -16,6 +16,7 @@ from typing import (
     Iterable, Sequence,
     TypedDict, Unpack,
     TypeGuard, Final,
+    TypeAliasType,
     get_type_hints, get_args, get_origin,
 )
 from types import FunctionType, UnionType, EllipsisType, NoneType
@@ -56,19 +57,6 @@ def _get_attr_names(cls: type) -> Iterable[str]:
         if hasattr(base, '__dict__'):
             yield from getattr(base, '__dict__')
 
-def _get_type_origin(
-    annotation: 'GenericAliasLike | type'
-    ) -> type:
-
-    tmp = annotation
-    while isinstance(tmp, GenericAliasLike):
-        tmp = tmp.__origin__
-    if not isinstance(tmp, type):
-        raise TypeError(
-            f"Annotation {annotation} is not a type."
-        )
-    return tmp
-
 def _flatten_info_to_strs(info: FlattenAnnInfo) -> list[str]:
     return list(_flatten_info_to_strs_impl(info))
 
@@ -92,13 +80,9 @@ def _insert_sep[T, S](sep: S,iterable: Iterable[T]) -> Iterable[T | S]:
     if isinstance(first, _SentinelType):
         return
     yield first
-    # print(first, end='')
     for item in iterator:
         yield sep
-        # print(sep, end='')
         yield item
-        # print(item, end='')
-    # print()
 
 class _NotSelectedType:
     def __bool__(self) -> Literal[False]:
@@ -163,6 +147,19 @@ class ArgumentContainerProtocol(Protocol):
 class GenericAliasLike(Protocol):
     __args__: tuple['GenericAliasLike | type | None', ...] | tuple[Any, EllipsisType]
     __origin__: Any
+
+def _get_type_origin(
+    annotation: GenericAliasLike | type
+    ) -> type:
+
+    tmp = annotation
+    while isinstance(tmp, GenericAliasLike):
+        tmp = tmp.__origin__
+    if not isinstance(tmp, type):
+        raise TypeError(
+            f"Annotation {annotation} is not a type."
+        )
+    return tmp
 
 class _MetaWrapper(abc.ABCMeta):
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
@@ -416,7 +413,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
     def _parse_annotation(
         self,
-        annotation: GenericAliasLike | UnionType | type
+        annotation: TypeAliasType | GenericAliasLike | UnionType | type
         ) -> _ParseAnnotationResult:
 
         result = self._ParseAnnotationResult()
@@ -447,24 +444,30 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
     def _determine_nargs_and_generic_args(
         self,
-        annotation: GenericAliasLike | UnionType | type
+        annotation: TypeAliasType | GenericAliasLike | UnionType | type
         ) -> tuple[
             int | Literal['?', '*', '+'] | None,
             tuple[GenericAliasLike | type | None, ...]
         ]:
 
-        tp_origin = get_origin(annotation)
-        tp_args = get_args(annotation)
+        core_ann = (
+            self._resolve_type_alias_type(annotation)
+            if isinstance(annotation, TypeAliasType)
+            else annotation
+        )
 
-        if isinstance(annotation, type):
-            return None, (annotation, )
+        tp_origin = get_origin(core_ann)
+        tp_args = get_args(core_ann)
 
-        if isinstance(annotation, UnionType) or tp_origin in (Literal, Union):
+        if isinstance(core_ann, type | None):
+            return None, (core_ann, )
+
+        if isinstance(core_ann, UnionType) or tp_origin in (Literal, Union):
             return None, tp_args
 
         if not isinstance(tp_origin, type):
             raise TypeError(
-                f"Annotation {annotation} has invalid origin {tp_origin}."
+                f"Annotation `{core_ann}` has invalid origin `{tp_origin}`."
             )
 
         no_ellipsis_args = tuple(a for a in tp_args if a is not ...)
@@ -475,7 +478,13 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         if issubclass(tp_origin, Sequence):
             return '*', no_ellipsis_args
 
-        return None, (annotation, )
+        return None, (core_ann, )
+    
+    def _resolve_type_alias_type(self, type_alias_type: TypeAliasType) -> GenericAliasLike | UnionType | type | None:
+        """Resolve TypeAliasType to its underlying type."""
+        while isinstance(type_alias_type, TypeAliasType):
+            type_alias_type = type_alias_type.__value__
+        return type_alias_type
 
     def _parse_pos_ann_info(
         self,
