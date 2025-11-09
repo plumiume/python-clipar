@@ -23,6 +23,7 @@ else:
 from types import UnionType
 
 UserId = TypeAliasType("UserId", int)
+UserName = TypeAliasType("UserName", str)
 CustomStr = TypeAliasType("CustomStr", str)
 
 _NS = TypeVar('_NS')
@@ -348,10 +349,8 @@ class TestBaseWrapper:
             pytest.skip("typing_extensions.TypeAliasType not available")
     
     def test_flatten_union_and_literal_with_type_alias(self):
-        """Test _flatten_union_and_literal with type alias"""
+        """Test _flatten_union_and_literal with resolved type from type alias"""
         try:
-            from typing_extensions import TypeAliasType
-            Username = TypeAliasType("Username", str)
             
             class ConcreteWrapper(BaseWrapper[_NS]):
                 def configure_container(self):
@@ -362,9 +361,11 @@ class TestBaseWrapper:
                 
                 wrapper = ConcreteWrapper(MockNamespace)
                 
-                # Test with type alias in a tuple
-                result = wrapper._flatten_union_and_literal((str, Username))
-                # Type alias should be handled without error
+                # _flatten_union_and_literal receives resolved types, not TypeAliasType directly
+                # The TypeAliasType should be resolved before calling this method
+                resolved_type = wrapper._resolve_type_alias_type(UserName)
+                result = wrapper._flatten_union_and_literal((str, resolved_type))
+                # Type alias should be resolved to str
                 assert str in result
         except ImportError:
             pytest.skip("typing_extensions.TypeAliasType not available")

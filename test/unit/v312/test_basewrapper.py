@@ -325,7 +325,7 @@ class TestBaseWrapper:
             assert args == (str,)  # CustomStr is unwrapped to str
     
     def test_flatten_union_and_literal_with_type_alias_type(self):
-        """Test _flatten_union_and_literal with type alias"""
+        """Test _flatten_union_and_literal with resolved type from type alias"""
         
         class ConcreteWrapper[NS](BaseWrapper[NS]):
             def configure_container(self):
@@ -336,9 +336,11 @@ class TestBaseWrapper:
             
             wrapper = ConcreteWrapper(MockNamespace)
             
-            # Test with type alias in a tuple
-            result = wrapper._flatten_union_and_literal((str, Username))
-            # Type alias should be handled without error
+            # _flatten_union_and_literal receives resolved types, not TypeAliasType directly
+            # The TypeAliasType should be resolved before calling this method
+            resolved_type = wrapper._resolve_type_alias_type(Username)
+            result = wrapper._flatten_union_and_literal((str, resolved_type))
+            # Type alias should be resolved to str
             assert str in result
     
     def test_bind(self):

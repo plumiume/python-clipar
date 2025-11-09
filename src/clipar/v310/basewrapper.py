@@ -343,6 +343,8 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
         nargs, annotation_args = self._determine_nargs_and_generic_args(annotation)
 
         # Handle fixed-length tuple (nargs is int)
+        # TODO: 不快なネストロジックを削除（これはなぜ必要ですか）
+        # COMMENT: v312版のロジックを正しく反映してください
         if isinstance(nargs, int):
             type_fns: list[Callable[[str], object]] = []
             for arg in annotation_args:
@@ -482,24 +484,6 @@ class BaseWrapper(abc.ABC, Generic[_NS]):
             for ann in union_args
         ))
 
-        # Original implementation (dictionary comprehension) - preserves insertion order
-        # but processes types before literals, which can break Union type order
-        # ret: dict[
-        #     type | GenericAliasLike,
-        #     list[type | GenericAliasLike | Literalizable]
-        # ] = {
-        #     ann: [ann]
-        #     for ann in literal_args
-        #     if isinstance(ann, type | GenericAliasLike)
-        # }
-        #
-        # for ann in literal_args:
-        #     if isinstance(ann, Literalizable):
-        #         ret.setdefault(type(ann), []).append(ann)
-        #
-        # return ret
-
-        # New implementation - preserves literal_args order for Union type order
         ret: dict[
             type | GenericAliasLike,
             list[type | GenericAliasLike | Literalizable]

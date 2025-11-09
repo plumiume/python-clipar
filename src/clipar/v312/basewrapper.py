@@ -540,21 +540,6 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             for ann in union_args
         ))
 
-        # ret: dict[
-        #     type | GenericAliasLike,
-        #     tuple[bool, list[Literalizable]]
-        # ] = {
-        #     ann: (False, [])
-        #     for ann in literal_args
-        #     if isinstance(ann, type | GenericAliasLike)
-        # }
-
-        # for ann in literal_args:
-        #     if isinstance(ann, Literalizable):
-        #         ret.setdefault(type(ann), (True, []))[1].append(ann)
-
-        # return ret
-
         ret: dict[
             type | GenericAliasLike,
             tuple[bool, list[Literalizable]]
