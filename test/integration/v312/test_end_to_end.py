@@ -10,6 +10,12 @@ from clipar import mixin
 # Python 3.14+ disallows nested argument groups
 PYTHON_314_PLUS = sys.version_info >= (3, 14)
 
+# Module-level type alias definitions for testing (Python 3.12+)
+type UserId = int
+type Username = str
+type Port = int
+type StringOrUserId = str | int
+
 
 class TestBasicNamespace:
     """Basic namespace functionality integration tests"""
@@ -684,6 +690,95 @@ class TestEdgeCases:
         # Test invalid literal value would raise error during parsing
         # Note: This test verifies the type constraint exists, actual error handling 
         # depends on argparse implementation
+
+
+class TestTypeAliasTypeSupport:
+    """Test type alias support (Python 3.12+)"""
+
+    def test_namespace_with_type_alias_positional(self):
+        """Test namespace with type alias as positional argument"""
+        @namespace
+        class UserConfig:
+            user_id: UserId
+            name: Username = "anonymous"
+
+        config = UserConfig.parse_args(["12345"])
+        assert config.user_id == 12345
+        assert config.name == "anonymous"
+
+    def test_namespace_with_type_alias_optional(self):
+        """Test namespace with type alias as optional argument"""
+        @namespace
+        class ServerConfig:
+            host: str = "localhost"
+            port: Port = 8080
+
+        config = ServerConfig.parse_args(["--port", "3000"])
+        assert config.host == "localhost"
+        assert config.port == 3000
+
+    def test_group_with_type_alias(self):
+        """Test group decorator with type alias"""
+        @group
+        class DatabaseGroup:
+            db_port: Port = 5432
+            db_user: Username = "admin"
+
+        @namespace
+        class AppConfig:
+            app_name: str
+            database = DatabaseGroup
+
+        config = AppConfig.parse_args([
+            "MyApp",
+            "--db-port", "3306",
+            "--db-user", "root"
+        ])
+        assert config.app_name == "MyApp"
+        assert config.database.db_port == 3306
+        assert config.database.db_user == "root"
+
+    def test_type_alias_with_union_types(self):
+        """Test type alias combined with union types"""
+        
+        @namespace
+        class FlexibleConfig:
+            identifier: StringOrUserId
+            mode: str = "auto"
+
+        # Test with string value
+        config = FlexibleConfig.parse_args(["user123"])
+        assert config.identifier == "user123"
+        assert config.mode == "auto"
+
+        # Test with numeric value
+        config = FlexibleConfig.parse_args(["999"])
+        # Note: argparse will treat this as string unless custom type converter is used
+        assert config.identifier == "999"
+
+    def test_nested_namespace_with_type_alias(self):
+        """Test nested namespace with type alias"""
+        @namespace
+        class ConnectionConfig:
+            port: Port = 8080
+            timeout: int = 30
+
+        @namespace
+        class ServiceConfig:
+            service_id: UserId
+            connection = ConnectionConfig
+
+        config = ServiceConfig.parse_args([
+            "42",
+            "connection",
+            "--port", "9000",
+            "--timeout", "60"
+        ])
+        assert config.service_id == 42
+        assert config.connection is not NotSelected
+        assert config.connection.port == 9000
+        assert config.connection.timeout == 60
+
 
 class TestNestedDecorators:
     """Test nested decorators functionality"""
