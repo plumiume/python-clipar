@@ -144,7 +144,7 @@ class LazyContainer(ArgumentContainerProtocol):
                     else title
                 ),
                 description=self.options.description,
-                prefix_chars=self.options.prefix_chars,
+                prefix_chars=self.options.prefix_chars, # deprecated in argparse python3.14+
                 conflict_handler=self.options.conflict_handler
             )
             supports_ameg_group = supports_aa_group
