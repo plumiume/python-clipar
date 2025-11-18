@@ -10,7 +10,7 @@ and mutually exclusive groups with type-safe parsing.
 
 Main decorators:
     @namespace: Creates a CLI namespace from a class
-    @group: Creates an argument group within a namespace  
+    @group: Creates an argument group within a namespace
     @mutually_exclusive_group: Creates mutually exclusive arguments
 
 Example:
@@ -18,7 +18,7 @@ Example:
     class Config:
         verbose: bool = False
         input_file: str
-        
+
     config = Config.parse_args()
 """
 

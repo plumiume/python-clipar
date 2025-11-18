@@ -9,6 +9,9 @@ and modern Python features for command-line interface definitions.
 """
 
 # pyright: reportUnnecessaryIsInstance=false
+
+from __future__ import annotations
+
 import abc
 from typing import (
     overload, Self, Protocol, runtime_checkable, Any,
@@ -26,17 +29,20 @@ from itertools import chain
 import argparse
 
 from .class_ast import ClassAstHolder
-from .mixin import _mixin_attrs # pyright: ignore[reportPrivateUsage]
+from .mixin import _mixin_attrs  # pyright: ignore[reportPrivateUsage]
 
 Literalizable = str | int | float | bool | NoneType
 Location = list[str]
 OnParseHookArgs = tuple[Location, 'BoundWrapper[BaseWrapper[Any]]']
-FlattenAnnInfo = dict['GenericAliasLike | type', tuple[bool, list[Literalizable]]]
+FlattenAnnInfo = dict[
+    'GenericAliasLike | type', tuple[bool, list[Literalizable]]
+]
 PositionedAnnInfo = tuple[FlattenAnnInfo, Callable[[str], object], bool, int]
 'f_info, type_fn, is_limited, flatten_len'
 # deleted
 # MIXIN_ATTRIBUTES = set(dir(BaseMixin))
 # MIXIN_ANNOTATIONS = get_type_hints(BaseMixin)
+
 
 def _bool_type(value: str) -> bool:
     lowered = value.lower()
@@ -47,8 +53,10 @@ def _bool_type(value: str) -> bool:
     else:
         raise ValueError(f"Cannot convert '{value}' to bool.")
 
+
 def _return_bool(value: bool) -> bool:
     return value
+
 
 def _get_attr_names(cls: type) -> Iterable[str]:
     for base in reversed(cls.mro()):
@@ -57,8 +65,10 @@ def _get_attr_names(cls: type) -> Iterable[str]:
         if hasattr(base, '__dict__'):
             yield from getattr(base, '__dict__')
 
+
 def _flatten_info_to_strs(info: FlattenAnnInfo) -> list[str]:
     return list(_flatten_info_to_strs_impl(info))
+
 
 def _flatten_info_to_strs_impl(info: FlattenAnnInfo) -> Iterable[str]:
     for ann, (limited, lits) in info.items():
@@ -67,14 +77,19 @@ def _flatten_info_to_strs_impl(info: FlattenAnnInfo) -> Iterable[str]:
                 '' if limited else
                 f'{ann.__name__.upper()}'
                 if isinstance(ann, type) else
-                f'{ann}' # GenericAliasLike
+                f'{ann}'  # GenericAliasLike
             )
         yield from map(str, lits)
 
-class _SentinelType: ...
+
+class _SentinelType:
+    ...
+
+
 _Sentinel = _SentinelType()
 
-def _insert_sep[T, S](sep: S,iterable: Iterable[T]) -> Iterable[T | S]:
+
+def _insert_sep[T, S](sep: S, iterable: Iterable[T]) -> Iterable[T | S]:
     iterator = iter(iterable)
     first = next(iterator, _Sentinel)
     if isinstance(first, _SentinelType):
@@ -84,28 +99,38 @@ def _insert_sep[T, S](sep: S,iterable: Iterable[T]) -> Iterable[T | S]:
         yield sep
         yield item
 
+
 class _NotSelectedType:
+
     def __bool__(self) -> Literal[False]:
         return False
+
     def __getattr__(self, name: str) -> 'Literal[NotSelectedType.I]':
         try:
             return NotSelectedType.I
         except NameError as e:
             raise AttributeError() from e
 
+
 class NotSelectedType(Enum):
-    I = _NotSelectedType()
+    I = _NotSelectedType()  # noqa: E741
     "A singleton instance representing a value that is not selected or set."
+
     def __repr__(self) -> str:
         return "NotSelected"
+
     def __bool__(self) -> Literal[False]:
         return False
+
     def __getattr__(self, name: str) -> 'Literal[NotSelectedType.I]':
         try:
             return NotSelectedType.I
         except NameError as e:
             raise AttributeError() from e
+
+
 NotSelected: Final = NotSelectedType.I
+
 
 class AddArgumentOptions(TypedDict, total=False):
     action: str | type[argparse.Action]
@@ -120,13 +145,16 @@ class AddArgumentOptions(TypedDict, total=False):
     dest: str | None
     version: str
 
+
 @runtime_checkable
 class ArgumentContainerProtocol(Protocol):
+
     def add_argument(
         self,
         *name_or_flags: str,
         **kwargs: Unpack[AddArgumentOptions]
-        ) -> Any:...
+    ) -> Any: ...
+
     def add_argument_group(
         self,
         title: str | None = None,
@@ -134,23 +162,27 @@ class ArgumentContainerProtocol(Protocol):
         *,
         prefix_chars: str = '-',
         conflict_handler: str = 'error'
-        ) -> 'ArgumentContainerProtocol':...
+    ) -> 'ArgumentContainerProtocol': ...
+
     def add_mutually_exclusive_group(
         self,
         *,
         required: bool = False
-        ) -> 'ArgumentContainerProtocol':...
-    def set_defaults(self, **kwargs: Any):...
-    def get_default(self, dest: str) -> object:...
+    ) -> 'ArgumentContainerProtocol': ...
+
+    def set_defaults(self, **kwargs: Any): ...
+    def get_default(self, dest: str) -> object: ...
+
 
 @runtime_checkable
 class GenericAliasLike(Protocol):
-    __args__: tuple['GenericAliasLike | type | None', ...] | tuple[Any, EllipsisType]
+    __args__: tuple[
+        'GenericAliasLike | type | None', ...
+    ] | tuple[Any, EllipsisType]
     __origin__: Any
 
-def _get_type_origin(
-    annotation: GenericAliasLike | type
-    ) -> type:
+
+def _get_type_origin(annotation: GenericAliasLike | type) -> type:
 
     tmp = annotation
     while isinstance(tmp, GenericAliasLike):
@@ -161,17 +193,21 @@ def _get_type_origin(
         )
     return tmp
 
+
 class _MetaWrapper(abc.ABCMeta):
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         inst = super().__call__(*args, **kwargs)
         if isinstance(inst, BaseWrapper):
-            inst._init_args = args # pyright: ignore[reportPrivateUsage]
-            inst._init_kwargs = kwargs # pyright: ignore[reportPrivateUsage]
-        return inst # pyright: ignore[reportUnknownVariableType]
+            inst._init_args = args  # pyright: ignore[reportPrivateUsage]
+            inst._init_kwargs = kwargs  # pyright: ignore[reportPrivateUsage]
+        return inst  # pyright: ignore[reportUnknownVariableType]
+
 
 class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
-    ## Serialize
+    # ========================================
+    # Serialize
+    # ========================================
 
     _init_args: tuple[Any, ...]
     _init_kwargs: dict[str, Any]
@@ -181,18 +217,22 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         cls: type[Self],
         args: tuple[Any, ...],
         kwargs: dict[str, Any]
-        ) -> Self:
+    ) -> Self:
         return cls(*args, **kwargs)
 
     def __reduce__(self):
         return (self._reduce_init, (self._init_args, self._init_kwargs))
 
-    ## Repr
+    # ========================================
+    # Repr
+    # ========================================
 
     def __repr__(self) -> str:
         return f'{self.__class__.__qualname__}({self.namespace_type})'
 
-    ## Core
+    # ========================================
+    # Core
+    # ========================================
 
     def __init__(self, namespace_type: type[NS]):
         self.namespace_type = namespace_type
@@ -208,18 +248,20 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         self,
         instance: 'WrapperHolder[Any] | type | None',
         owner: type | None = None
-        ) -> Self:...
+    ) -> Self: ...
+
     @overload
     def __get__(
         self,
         instance: object,
         owner: type | None = None
-        ) -> NS | Literal[NotSelectedType.I]: ...
+    ) -> NS | Literal[NotSelectedType.I]: ...
+
     def __get__(
         self,
         instance: type | object | None,
         owner: type | None = None
-        ):
+    ):
 
         if instance is None or isinstance(instance, WrapperHolder | type):
             return self
@@ -247,7 +289,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         self,
         container: ArgumentContainerProtocol,
         namespace_type: type[NS]
-        ):
+    ):
 
         assign_infos: dict[str, ClassAstHolder.VarInfo] = {}
         # try:
@@ -292,11 +334,13 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
                     f"it must be an instance or a default value."
                 )
 
-            elif in_dict and isinstance(default, SubparserWrapper | SubgroupWrapper):
+            elif in_dict and isinstance(
+                default, SubparserWrapper | SubgroupWrapper
+            ):
                 self._add_wrapper(
                     container=container,
                     name=attr_key,
-                    wrapper=default # pyright: ignore[reportUnknownArgumentType]
+                    wrapper=default  # pyright: ignore[reportUnknownArgumentType] # noqa: E501
                 )
 
             elif in_dict and isinstance(default, FunctionType):
@@ -322,17 +366,18 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
                     doc=doc,
                 )
 
-            else: # Never
+            else:  # Never
                 raise ValueError(
-                    f"Assign name '{attr_key}' not found in annotations or dict."
+                    f"Assign name '{attr_key}' not found "
+                    "in annotations or dict."
                 )
 
     def _add_wrapper(
         self,
-        container: ArgumentContainerProtocol, # for compatibility, not used
+        container: ArgumentContainerProtocol,  # for compatibility, not used
         name: str,
         wrapper: 'SubparserWrapper[Any] | SubgroupWrapper[Any]'
-        ):
+    ):
         """Register a subparser or subgroup wrapper with the specified name."""
 
         wrapper.on_before_bind(name, self)
@@ -361,7 +406,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         name: str,
         annotation: type | UnionType | GenericAliasLike,
         doc: str | None
-        ):
+    ):
         """Add a required positional argument to the container."""
 
         parse_result = self._parse_annotation(annotation)
@@ -379,7 +424,7 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
         annotation: GenericAliasLike | type,
         default: object,
         doc: str | None
-        ):
+    ):
         """Add an optional argument with default value to the container."""
 
         name_or_flag = '--' + name.replace('_', '-')
@@ -417,12 +462,14 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
     def _parse_annotation(
         self,
         annotation: TypeAliasType | GenericAliasLike | UnionType | type
-        ) -> _ParseAnnotationResult:
+    ) -> _ParseAnnotationResult:
         """Parse type annotation and extract argparse configuration."""
 
         result = self._ParseAnnotationResult()
 
-        result['nargs'], annotation_args = self._determine_nargs_and_generic_args(annotation)
+        result['nargs'], annotation_args = self._determine_nargs_and_generic_args(  # noqa: E501
+            annotation
+        )
 
         if isinstance(result.get('nargs'), int):
             nargs_info = self._FixedIntNargsInfo([
@@ -449,11 +496,12 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
     def _determine_nargs_and_generic_args(
         self,
         annotation: TypeAliasType | GenericAliasLike | UnionType | type
-        ) -> tuple[
-            int | Literal['?', '*', '+'] | None,
-            tuple[GenericAliasLike | type | None, ...]
-        ]:
-        """Determine nargs value and extract generic type arguments from annotation."""
+    ) -> tuple[
+        int | Literal['?', '*', '+'] | None,
+        tuple[GenericAliasLike | type | None, ...]
+    ]:
+        """Determine nargs value
+        and extract generic type arguments from annotation."""
 
         core_ann = (
             self._resolve_type_alias_type(annotation)
@@ -484,8 +532,10 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
             return '*', no_ellipsis_args
 
         return None, (core_ann, )
-    
-    def _resolve_type_alias_type(self, type_alias_type: TypeAliasType) -> GenericAliasLike | UnionType | type | None:
+
+    def _resolve_type_alias_type(
+        self, type_alias_type: TypeAliasType
+    ) -> GenericAliasLike | UnionType | type | None:
         """Resolve TypeAliasType to its underlying type."""
         while isinstance(type_alias_type, TypeAliasType):
             type_alias_type = type_alias_type.__value__
@@ -494,8 +544,9 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
     def _parse_pos_ann_info(
         self,
         annotation_args: tuple[GenericAliasLike | UnionType | type | None, ...]
-        ) -> PositionedAnnInfo:
-        """Parse positioned annotation information from annotation arguments."""
+    ) -> PositionedAnnInfo:
+        """Parse positioned annotation information
+        from annotation arguments."""
 
         flatten_annotations = self._flatten_union_and_literal(annotation_args)
 
@@ -521,8 +572,9 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
     def _flatten_union_and_literal(
         self,
         annotations: tuple[GenericAliasLike | UnionType | type | None, ...]
-        ) -> FlattenAnnInfo:
-        """Flatten Union and Literal type annotations into a normalized dictionary."""
+    ) -> FlattenAnnInfo:
+        """Flatten Union and Literal type annotations
+        into a normalized dictionary."""
 
         union_args = list(chain.from_iterable(
             ann.__args__
@@ -569,17 +621,17 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
         def __call__(self, value: str) -> object:
 
-            for ann , (limited, lits) in self._info.items():
+            for ann, (limited, lits) in self._info.items():
 
                 type_ = _get_type_origin(ann)
 
                 try:
                     inst = type_(value)
                 except (ValueError, TypeError):
-                    continue # try next type
+                    continue  # try next type
 
                 if limited and inst not in lits:
-                    continue # try next type
+                    continue  # try next type
 
                 return inst
 
@@ -631,7 +683,10 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
 
             pair = next(self._info_iter, None)
             if pair is None:
-                raise ValueError(f"Too many arguments provided (expected {len(self._infos)}).")
+                raise ValueError(
+                    "Too many arguments provided "
+                    f"(expected {len(self._infos)})."
+                )
             _, type_fn, _, _ = pair
             return type_fn(value)
 
@@ -649,7 +704,9 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
                 for info in self._infos
             )
 
-    # def _flatten_subparsers(self) -> list[tuple[list[str], 'BoundWrapper[SubparserWrapper[Any]]']]:
+    # def _flatten_subparsers(self) -> list[
+    #     tuple[list[str], 'BoundWrapper[SubparserWrapper[Any]]']
+    # ]:
 
     #     return list(chain.from_iterable(
     #         chain(
@@ -665,7 +722,9 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
     #         for name, bound_wrapper in self._subparsers.items()
     #     ))
 
-    # def _flatten_subgroups(self) -> list[tuple[list[str], 'BoundWrapper[SubgroupWrapper[Any]]']]:
+    # def _flatten_subgroups(self) -> list[
+    #     tuple[list[str], 'BoundWrapper[SubgroupWrapper[Any]]']
+    # ]:
 
     #     return list(chain.from_iterable(
     #         chain(
@@ -681,37 +740,53 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
     #         for name, bound_wrapper in self._subgroups.items()
     #     ))
 
-    def _bind(self, name: str, parent: 'BaseWrapper[Any]') -> 'BoundWrapper[Self]':
+    def _bind(
+        self, name: str, parent: 'BaseWrapper[Any]'
+    ) -> 'BoundWrapper[Self]':
         return BoundWrapper(name, parent, self)
 
-    ## Hooks
+    # =======================================
+    # Hooks
+    # =======================================
 
     def on_before_bind(self, bound_name: str, wrapper: 'BaseWrapper[Any]'):
         pass
+
     def on_after_bind(self, bound_name: str, wrapper: 'BaseWrapper[Any]'):
         pass
 
-    def on_before_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
-        pass
-    def on_after_parse(self, location: Location, bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'):
+    def on_before_parse(
+        self,
+        location: Location,
+        bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'
+    ):
         pass
 
-    ## Public API
+    def on_after_parse(
+        self,
+        location: Location,
+        bound_wrapper: 'BoundWrapper[BaseWrapper[Any]] | None'
+    ):
+        pass
+
+    # =======================================
+    # Public API
+    # =======================================
 
     def add_wrapper(
         self,
         name: str,
         wrapper: 'SubparserWrapper[Any] | SubgroupWrapper[Any]'
-        ):
+    ):
 
         """
         Dynamically add a wrapper to create nested command structures.
-        
+
         This method enables runtime construction of nested CLI structures by adding
         subparser or subgroup wrappers to the current container. It's primarily used
         to build complex configurations combining namespace, group, and mutually
         exclusive group decorators.
-        
+
         Args:
             name :code:`(str)`: The identifier for the wrapper. This becomes the subcommand name
                 for subparsers or the group identifier for subgroups.
@@ -719,10 +794,10 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
                 to add. Must be either a :class:`SubparserWrapper` (e.g., from ``@namespace``
                 decorator) or :class:`SubgroupWrapper` (e.g., from ``@group`` or
                 ``@mutually_exclusive_group`` decorators).
-        
+
         Raises:
             TypeError: If the wrapper type is not :class:`SubparserWrapper` or :class:`SubgroupWrapper`.
-        
+
         Note:
             - Calls binding hooks (:meth:`on_before_bind`, :meth:`on_after_bind`) during registration
             - Creates a :class:`BoundWrapper` instance to manage the relationship
@@ -731,65 +806,66 @@ class BaseWrapper[NS](abc.ABC, metaclass=_MetaWrapper):
               selected subcommand becomes active (others remain :data:`NotSelected`)
             - For ``@group``/``@mutually_exclusive_group`` wrappers: All arguments are flattened
               to the top level, and aliasing may cause argument name conflicts
-        
+
         Example::
-        
+
             # Add a database configuration group
             database_group = GroupWrapper(DatabaseConfig) 
             main_wrapper.add_wrapper("database", database_group)
-            
+    
             # Add subcommand for nested namespace
             config_ns = NamespaceWrapper(ConfigNamespace)
             main_wrapper.add_wrapper("config", config_ns)
-            
+    
             # Create alias (works for namespaces, may conflict for groups)
             main_wrapper.add_wrapper("cfg", config_ns)
-        """
+        """  # noqa E501
 
         self._add_wrapper(self._container, name, wrapper)
 
     def copy(self) -> Self:
         """
         Create a deep copy of this wrapper instance.
-        
+
         This method creates a complete independent copy of the wrapper, including:
-        
+
         - All configuration and state
         - Nested subparsers and subgroups
         - Argument definitions and their metadata
         - Container configuration
-        
+
         The copied wrapper maintains the same structure and behavior as the original
         but operates independently - modifications to one wrapper won't affect the other.
-        
+
         Returns:
             :code:`Self`: A new wrapper instance that is a deep copy of this one.
-        
+
         Note:
             - The ``namespace_type`` reference is preserved (not deep copied)
             - All nested wrappers are recursively deep copied
             - Container state is reconstructed during copy
             - Useful for creating template wrappers or backup configurations
-        
+
         Example::
-        
+
             original_wrapper = NamespaceWrapper(MyConfig)
             original_wrapper.add_wrapper("sub", SubWrapper(SubConfig))
-            
+
             # Create independent copy
             copied_wrapper = original_wrapper.copy()
-            
+
             # Modifications to copy don't affect original
             copied_wrapper.add_wrapper("new_sub", AnotherWrapper(AnotherConfig))
-        """
+        """  # noqa E501
         from copy import deepcopy
         return deepcopy(self)
+
 
 class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
     def __init__(
         self,
         namespace_type: type[NS]
-        ):
+    ):
         super().__init__(namespace_type)
         self._container.set_defaults(_clipar_wrapper=self)
         self._callback: Callable[[NS], object] | None = None
@@ -797,7 +873,7 @@ class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
     def _set_callback(
         self,
         callback: Callable[[NS], object]
-        ):
+    ):
         self._callback = callback
 
     def _check_namespace(self, namespace: object) -> TypeGuard[NS]:
@@ -814,14 +890,20 @@ class SubparserWrapper[NS](BaseWrapper[NS], abc.ABC):
         if self._check_namespace(namespace):
             return self._callback(namespace)
 
+
 class SubgroupWrapper[NS](BaseWrapper[NS], abc.ABC):
     pass
 
-class WrapperHolder[W: BaseWrapper[Any]]: pass
+
+class WrapperHolder[W: BaseWrapper[Any]]:
+    pass
+
 
 class BoundWrapper[W: BaseWrapper[Any]](WrapperHolder[W]):
 
-    def __init__(self, name: str, parent_wrapper: BaseWrapper[Any], self_wrapper: W):
+    def __init__(
+        self, name: str, parent_wrapper: BaseWrapper[Any], self_wrapper: W
+    ):
         self._bound_name = name
         self._parent = parent_wrapper
         self._self = self_wrapper

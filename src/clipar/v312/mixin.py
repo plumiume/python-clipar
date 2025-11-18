@@ -1,19 +1,24 @@
 from typing import Any, TypedDict, get_type_hints
 from types import FunctionType
 
+
 def _is_dunder(name: str) -> bool:
     return name.startswith('__') and name.endswith('__') and len(name) > 4
+
 
 def _mixin_attr[T](func_or_type: T) -> T:
     if isinstance(func_or_type, FunctionType | type):
         _mixin_attrs.add(func_or_type.__name__)
     return func_or_type
 
+
 _mixin_attrs: set[str] = set()
+
 
 class _CliparMixinDict(TypedDict):
     _repr_lock: bool
     command: str | None
+
 
 class _MetaMixin(type):
 
@@ -26,18 +31,22 @@ class _MetaMixin(type):
         )
         return obj
 
+
 class BaseMixin(metaclass=_MetaMixin):
     clipar_mixin_dict: _CliparMixinDict
+
+
 _mixin_attrs.update(get_type_hints(BaseMixin))
 _mixin_attrs.update(dir(BaseMixin))
 
+
 class ReprMixin(BaseMixin):
     """A mixin class that provides a custom __repr__ method for better object representation.
-    
+
     This mixin automatically generates a string representation of the object by displaying
     all non-dunder attributes and their values. It includes protection against infinite
     recursion through a lock mechanism.
-    """
+    """  # noqa E501
 
     @_mixin_attr
     def __repr__(self):
@@ -69,9 +78,10 @@ class ReprMixin(BaseMixin):
 
         return ret
 
+
 class CommandMixin(BaseMixin):
     """A mixin class that provides command storage and retrieval functionality.
-    
+
     This mixin allows objects to store and access a command string through
     a property interface, managing the command state in the clipar_mixin_dict.
     """

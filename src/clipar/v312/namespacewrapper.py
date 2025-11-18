@@ -6,7 +6,9 @@ Namespace wrapper implementation for Python 3.12+ compatibility.
 
 This module provides the NamespaceWrapper class with enhanced type support
 and modern Python features for handling argument parsing and namespace creation.
-"""
+""" # noqa E501
+
+from __future__ import annotations
 
 import sys
 from typing import (
@@ -17,7 +19,7 @@ from typing import (
 )
 import argparse
 from argparse import (
-    _SubParsersAction, # pyright: ignore[reportPrivateUsage]
+    _SubParsersAction  # pyright: ignore[reportPrivateUsage]
 )
 import argcomplete
 from .basewrapper import (
@@ -41,30 +43,34 @@ class ArgumentParserOptions(TypedDict, total=False):
     epilog: str | None
     "A message to display after the argument help."
     # parents: Sequence[argparse.ArgumentParser]
-    # "A list of ArgumentParser objects whose arguments should be added to this parser."
+    # """A list of ArgumentParser objects
+    #     whose arguments should be added to this parser."""
     # not used
     formatter_class: type[argparse.HelpFormatter]
     "The class used to format the help output."
     prefix_chars: str
     "The set of characters that prefix optional arguments (default: '-')"
     fromfile_prefix_chars: str | None
-    "Characters that prefix files containing additional arguments (default: None)"
+    """Characters that prefix files
+        containing additional arguments (default: None)"""
     # argument_default: Any | None
     # "The default value for arguments (default: None)"
     # not used
     conflict_handler: str
-    "The strategy for resolving conflicts between argument names (default: 'error')"
+    """The strategy for resolving conflicts
+        between argument names (default: 'error')"""
     add_help: bool
     "Whether to add a default help argument (default: True)"
     allow_abbrev: bool
     "Whether to allow abbreviations of long options (default: True)"
     exit_on_error: bool
     "Whether to exit on error (default: True)"
-    if sys.version_info >= (3, 14): # pyright: ignore[reportGeneralTypeIssues]
+    if sys.version_info >= (3, 14):  # pyright: ignore[reportGeneralTypeIssues]
         suggest_on_error: bool
         "Whether to suggest similar options on error (default: False)"
         color: bool
         "Whether to use color in the help output (default: False)"
+
 
 class SubParserOptions(TypedDict, total=False):
     title: str
@@ -74,7 +80,8 @@ class SubParserOptions(TypedDict, total=False):
     required: bool
     "Whether the subcommand is required (default: False)"
 
-class TrackableSubParsersAction(_SubParsersAction): # pyright: ignore[reportMissingTypeArgument]
+
+class TrackableSubParsersAction(_SubParsersAction):  # pyright: ignore[reportMissingTypeArgument] # noqa E501
 
     def __init__(
         self,
@@ -85,9 +92,9 @@ class TrackableSubParsersAction(_SubParsersAction): # pyright: ignore[reportMiss
         required: bool = False,
         help: str | None = None,
         metavar: str | None = None,
-        ):
+    ):
 
-        super().__init__( # pyright: ignore[reportUnknownMemberType]
+        super().__init__(  # pyright: ignore[reportUnknownMemberType]
             option_strings,
             prog,
             parser_class,
@@ -103,7 +110,7 @@ class TrackableSubParsersAction(_SubParsersAction): # pyright: ignore[reportMiss
         namespace: argparse.Namespace,
         values: str | Sequence[Any] | None,
         option_string: str | None = None
-        ):
+    ):
 
         super().__call__(
             parser,
@@ -117,12 +124,15 @@ class TrackableSubParsersAction(_SubParsersAction): # pyright: ignore[reportMiss
 
         parser_name, *_ = values
 
-        command_chain: list[str] | None = getattr(namespace, '_clipar_command_chain', None)
+        command_chain: list[str] | None = getattr(
+            namespace, '_clipar_command_chain', None
+        )
         if command_chain is None:
             command_chain = [parser_name]
             setattr(namespace, '_clipar_command_chain', command_chain)
         else:
             command_chain.append(parser_name)
+
 
 class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
@@ -131,7 +141,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
         namespace_type: type[NS],
         parser_options: ArgumentParserOptions = {},
         subparser_options: SubParserOptions = {},
-        ):
+    ):
 
         self._parser = argparse.ArgumentParser(**parser_options)
         self._subparser_options = subparser_options
@@ -145,7 +155,10 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                 action=TrackableSubParsersAction,
                 **self._subparser_options,
             )
-            if isinstance(trackable_subparsers_action, TrackableSubParsersAction):
+            if isinstance(
+                trackable_subparsers_action,
+                TrackableSubParsersAction
+            ):
                 self._parser_subparsers = trackable_subparsers_action
             else:
                 raise TypeError(
@@ -160,10 +173,11 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
     def on_after_bind(self, bound_name: str, wrapper: BaseWrapper[Any]):
         if isinstance(wrapper, SubgroupWrapper):
             raise TypeError(
-                f"SubgroupWrapper {wrapper} cannot be bound to a NamespaceWrapper."
+                f"SubgroupWrapper {wrapper} "
+                "cannot be bound to a NamespaceWrapper."
             )
         if isinstance(wrapper, NamespaceWrapper):
-            wrapper._get_subparsers().add_parser( # pyright: ignore[reportUnknownMemberType]
+            wrapper._get_subparsers().add_parser(  # pyright: ignore[reportUnknownMemberType] # noqa E501
                 bound_name,
                 parents=[self._parser],
                 add_help=False,
@@ -211,12 +225,18 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
         return ret
 
-    def _after_parse(self, namespace: argparse.Namespace, flattens: list[OnParseHookArgs]) -> NS:
+    def _after_parse(
+        self,
+        namespace: argparse.Namespace,
+        flattens: list[OnParseHookArgs]
+    ) -> NS:
 
-        # leaf_wrapper: SubparserWrapper[Any] = getattr(namespace, '_clipar_wrapper')
+        # leaf_wrapper: SubparserWrapper[Any] = getattr(
+        #     namespace, '_clipar_wrapper'
+        # )
         command_chain: list[str] = list(reversed(
             getattr(namespace, '_clipar_command_chain', [])
-        )) # leaf to root
+        ))  # leaf to root
 
         ret_ns = self.namespace_type()
 
@@ -247,9 +267,13 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
             if isinstance(parent_ns, mixin.CommandMixin):
                 parent_ns.clipar_mixin_dict['command'] = holder.bound_name
 
-            namespace_table[holder.self] = (location, holder, tmp_ns, holder.self._arg_names)
+            namespace_table[holder.self] = (
+                location, holder, tmp_ns, holder.self._arg_names
+            )
 
-        for location, holder, tmp_ns, arg_names in reversed(namespace_table.values()):
+        for location, holder, tmp_ns, arg_names in reversed(
+            namespace_table.values()
+        ):
 
             for a in arg_names:
                 setattr(tmp_ns, a, getattr(namespace, a))
@@ -261,7 +285,9 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
 
         return ret_ns
 
-    ## Public API
+    # ========================================
+    # Public API
+    # ========================================
 
     def parse_args(self, args: list[str] | None = None) -> NS:
         """
@@ -306,12 +332,14 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                             # config.input_file == 'data.txt'
                             # config.verbose == True
 
-        """
+        """  # noqa E501
         flattens = self._before_parse()
         namespace = self._parser.parse_args(args)
         return self._after_parse(namespace, flattens)
 
-    def parse_known_args(self, args: list[str] | None = None) -> tuple[NS, list[str]]:
+    def parse_known_args(
+        self, args: list[str] | None = None
+    ) -> tuple[NS, list[str]]:
         """
         Parse known command-line arguments and return unrecognized arguments separately.
         
@@ -351,7 +379,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                             # config.verbose == True
                             # unknown == ['--unknown-flag', 'extra']
 
-        """
+        """  # noqa E501
         flattens = self._before_parse()
         namespace, unknown_args = self._parser.parse_known_args(args)
         return (self._after_parse(namespace, flattens), unknown_args)
@@ -400,13 +428,14 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                             # config.verbose == True
                             # config.files == ['file1.txt', 'file2.txt']
 
-        """
+        """  # noqa E501
         flattens = self._before_parse()
         namespace = self._parser.parse_intermixed_args(args)
         return self._after_parse(namespace, flattens)
 
-
-    def parse_known_intermixed_args(self, args: list[str] | None = None) -> tuple[NS, list[str]]:
+    def parse_known_intermixed_args(
+        self, args: list[str] | None = None
+    ) -> tuple[NS, list[str]]:
         """
         Parse known intermixed arguments and return unrecognized arguments separately.
         
@@ -446,15 +475,17 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                             # config.verbose == True
                             # unknown == ['--unknown', 'value', 'extra']
 
-        """
+        """  # noqa E501
         flattens = self._before_parse()
-        namespace, unknown_args = self._parser.parse_known_intermixed_args(args)
+        namespace, unknown_args = self._parser.parse_known_intermixed_args(
+            args
+        )
         return (self._after_parse(namespace, flattens), unknown_args)
 
     def callback[R](
         self,
         func: Callable[[NS], R]
-        ) -> Callable[[NS], R]:
+    ) -> Callable[[NS], R]:
         """
         Register a callback function to be executed after parsing the namespace.
 
@@ -489,7 +520,7 @@ class NamespaceWrapper[NS](SubparserWrapper[NS]):
                             # post_process will be called automatically after parsing
                             # config is now available
 
-        """
+        """  # noqa E501
 
         self._set_callback(func)
         return func

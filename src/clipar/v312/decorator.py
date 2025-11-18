@@ -1,7 +1,7 @@
 """
 Decorator functions for creating CLI interfaces from Python classes.
 
-This module provides the main decorator functions (@namespace, @group, 
+This module provides the main decorator functions (@namespace, @group,
 @mutually_exclusive_group) that transform Python classes into command-line
 interface components. Each decorator creates appropriate wrapper objects
 that handle argparse configuration and parsing.
@@ -9,18 +9,23 @@ that handle argparse configuration and parsing.
 
 from typing import overload, Self, Unpack, Final
 
-from .namespacewrapper import NamespaceWrapper, ArgumentParserOptions as NamespaceOptions
+from .namespacewrapper import (
+    NamespaceWrapper,
+    ArgumentParserOptions as NamespaceOptions
+)
 from .groupwrapper import (
     GroupWrapper, GroupWrapperOptions as GroupOptions,
-    MutuallyExclusiveGroupWrapper, MutuallyExclusiveGroupWrapperOptions as MutuallyExclusiveGroupWrapperOptions
+    MutuallyExclusiveGroupWrapper,
+    MutuallyExclusiveGroupWrapperOptions as MutuallyExclusiveGroupWrapperOptions  # noqa E501
 )
+
 
 class NamespaceWithOptions:
 
     def __init__(
         self,
         options: NamespaceOptions
-        ):
+    ):
         self.options = options
 
     @overload
@@ -28,23 +33,25 @@ class NamespaceWithOptions:
         self,
         namespace_type: type[NS],
         /
-        ) -> NamespaceWrapper[NS]: ...
+    ) -> NamespaceWrapper[NS]: ...
+
     @overload
     def __call__(
         self,
         namespace_type: None = None,
         /,
         **options: Unpack[NamespaceOptions],
-        ) -> Self: ...
+    ) -> Self: ...
+
     def __call__[NS](
         self,
         namespace_type: type[NS] | None = None,
         /,
         **options: Unpack[NamespaceOptions]
-        ):
+    ):
         """
         Create a new :class:`NamespaceWrapper` instance or modify options for future use.
-        
+
         This method serves dual purposes: when called with a namespace class type,
         it returns a configured :class:`NamespaceWrapper` for immediate use. When called
         without a type (or with `None`), it returns a new :class:`NamespaceWithOptions`
@@ -101,7 +108,7 @@ class NamespaceWithOptions:
 
         Examples:
             Basic usage with immediate namespace creation:
-            
+
             .. code-block:: python
 
                 from clipar import namespace
@@ -118,7 +125,7 @@ class NamespaceWithOptions:
 
 
             Creating a namespace with custom options:
-            
+
             .. code-block:: python
 
                 # Configure parser options before applying to namespace
@@ -137,7 +144,7 @@ class NamespaceWithOptions:
 
 
             Chaining options for reusable configurations:
-            
+
             .. code-block:: python
 
                 import argparse
@@ -161,7 +168,7 @@ class NamespaceWithOptions:
 
 
             Using different prefix characters:
-            
+
             .. code-block:: python
 
                 @namespace(prefix_chars='-+')
@@ -171,7 +178,7 @@ class NamespaceWithOptions:
 
 
             Reading arguments from files:
-            
+
             .. code-block:: python
 
                 @namespace(fromfile_prefix_chars='@')
@@ -183,7 +190,7 @@ class NamespaceWithOptions:
 
 
             Custom error handling:
-            
+
             .. code-block:: python
 
                 @namespace(
@@ -200,7 +207,7 @@ class NamespaceWithOptions:
                     # Parsing failed
                     pass
 
-        """
+        """  # noqa E501
 
         new_options = self.options | options
 
@@ -209,12 +216,13 @@ class NamespaceWithOptions:
 
         return NamespaceWrapper[NS](namespace_type, new_options)
 
+
 class GroupWithOptions:
 
     def __init__(
         self,
         options: GroupOptions
-        ):
+    ):
         self.options = options
 
     @overload
@@ -222,23 +230,25 @@ class GroupWithOptions:
         self,
         namespace_type: type[NS],
         /
-        ) -> GroupWrapper[NS]: ...
+    ) -> GroupWrapper[NS]: ...
+
     @overload
     def __call__(
         self,
         namespace_type: None = None,
         /,
         **options: Unpack[GroupOptions],
-        ) -> Self: ...
+    ) -> Self: ...
+
     def __call__[NS](
         self,
         namespace_type: type[NS] | None = None,
         /,
         **options: Unpack[GroupOptions]
-        ):
+    ):
         """
         Create a new GroupWrapper instance or modify options for future use.
-        
+
         This method configures argument groups for command-line parsing. When called
         with a namespace class type, it wraps the class as an argument group with
         the specified options. When called without a type, it returns a new
@@ -270,7 +280,7 @@ class GroupWithOptions:
 
         Examples:
             Basic argument group creation with external class definition:
-            
+
             .. code-block:: python
 
                 from clipar import namespace, group
@@ -302,7 +312,7 @@ class GroupWithOptions:
 
 
             Using nested group classes within namespace:
-            
+
             .. code-block:: python
 
                 @namespace
@@ -336,7 +346,7 @@ class GroupWithOptions:
 
 
             Creating groups with custom options:
-            
+
             .. code-block:: python
 
                 # Define group with title and description
@@ -357,7 +367,7 @@ class GroupWithOptions:
 
 
             Using custom options for nested groups:
-            
+
             .. code-block:: python
 
                 @namespace
@@ -387,7 +397,7 @@ class GroupWithOptions:
 
 
             Direct internal class assignment with group decorator:
-            
+
             .. code-block:: python
 
                 @namespace
@@ -424,7 +434,7 @@ class GroupWithOptions:
 
 
             Creating reusable group configurations:
-            
+
             .. code-block:: python
 
                 # Create a base group configuration
@@ -455,7 +465,7 @@ class GroupWithOptions:
 
 
             Multiple groups with clear type annotations:
-            
+
             .. code-block:: python
 
                 @group
@@ -487,7 +497,7 @@ class GroupWithOptions:
 
 
             Custom conflict handling in groups:
-            
+
             .. code-block:: python
 
                 @group(
@@ -512,7 +522,7 @@ class GroupWithOptions:
 
 
             Chaining group options for inheritance:
-            
+
             .. code-block:: python
 
                 # Base group with common settings
@@ -539,7 +549,7 @@ class GroupWithOptions:
                     version: str = '1.0.0'
                     logging: LoggingConfig
 
-        """
+        """  # noqa E501
 
         new_options = self.options | options
 
@@ -548,12 +558,13 @@ class GroupWithOptions:
 
         return GroupWrapper[NS](namespace_type, new_options)
 
+
 class MutuallyExclusiveGroupWithOptions:
 
     def __init__(
         self,
         options: MutuallyExclusiveGroupWrapperOptions
-        ):
+    ):
         self.options = options
 
     @overload
@@ -561,23 +572,25 @@ class MutuallyExclusiveGroupWithOptions:
         self,
         namespace_type: type[NS],
         /
-        ) -> MutuallyExclusiveGroupWrapper[NS]: ...
+    ) -> MutuallyExclusiveGroupWrapper[NS]: ...
+
     @overload
     def __call__(
         self,
         namespace_type: None = None,
         /,
         **options: Unpack[MutuallyExclusiveGroupWrapperOptions],
-        ) -> Self: ...
+    ) -> Self: ...
+
     def __call__[NS](
         self,
         namespace_type: type[NS] | None = None,
         /,
         **options: Unpack[MutuallyExclusiveGroupWrapperOptions]
-        ):
+    ):
         """
         Create a new MutuallyExclusiveGroupWrapper instance or modify options for future use.
-        
+
         This method configures mutually exclusive argument groups for command-line parsing.
         Mutually exclusive groups ensure that only one argument from the group can be
         specified at a time. When called with a namespace class type, it wraps the class
@@ -602,7 +615,7 @@ class MutuallyExclusiveGroupWithOptions:
 
         Examples:
             Basic mutually exclusive group creation:
-            
+
             .. code-block:: python
 
                 from clipar import namespace, mutually_exclusive_group
@@ -628,7 +641,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Required mutually exclusive group:
-            
+
             .. code-block:: python
 
                 @mutually_exclusive_group(required=True)
@@ -651,7 +664,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Output format selection:
-            
+
             .. code-block:: python
 
                 @mutually_exclusive_group
@@ -677,7 +690,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Logging level selection with requirement:
-            
+
             .. code-block:: python
 
                 @mutually_exclusive_group(required=True)
@@ -698,7 +711,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Processing mode selection:
-            
+
             .. code-block:: python
 
                 @mutually_exclusive_group
@@ -723,7 +736,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Chaining options for reusable configurations:
-            
+
             .. code-block:: python
 
                 # Create a base configuration
@@ -754,7 +767,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Complex application with multiple exclusive groups:
-            
+
             .. code-block:: python
 
                 @mutually_exclusive_group(required=True)
@@ -794,7 +807,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Verbose/quiet mutually exclusive pattern:
-            
+
             .. code-block:: python
 
                 @mutually_exclusive_group
@@ -821,7 +834,7 @@ class MutuallyExclusiveGroupWithOptions:
 
 
             Nested mutually exclusive groups within namespace:
-            
+
             .. code-block:: python
 
                 @namespace
@@ -852,7 +865,7 @@ class MutuallyExclusiveGroupWithOptions:
                 # config.auth.token_auth == True
                 # config.logging.log_to_file == True
 
-        """
+        """  # noqa E501
 
         new_options = self.options | options
 
@@ -861,6 +874,9 @@ class MutuallyExclusiveGroupWithOptions:
 
         return MutuallyExclusiveGroupWrapper[NS](namespace_type, new_options)
 
+
 namespace: Final = NamespaceWithOptions({}).__call__
 group: Final = GroupWithOptions({}).__call__
-mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions({}).__call__
+mutually_exclusive_group: Final = MutuallyExclusiveGroupWithOptions(
+    {}
+).__call__

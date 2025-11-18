@@ -4,6 +4,7 @@ import inspect
 import textwrap
 import ast
 
+
 class ClassAstHolder[CLS]:
     """
     A class for analyzing Python class Abstract Syntax Trees (AST) to extract variable definitions and their documentation.
@@ -36,18 +37,25 @@ class ClassAstHolder[CLS]:
         >>> holder = ClassAstHolder(SampleClass)
         >>> holder.get_assign_docs()
         {'x': 'x variable documentation', 'y': 'y variable documentation'}
-    """
+    """  # noqa E501
 
     def _get_class_code(self, cls: type) -> str:
 
         try:
             code = inspect.getsource(cls)
         except OSError as e:
-            raise OSError(f"Could not retrieve source code for class {cls.__name__}: {e}")
+            raise OSError(
+                f"Could not retrieve source code for class {cls.__name__}: {e}"
+            )
         except TypeError as e:
-            raise TypeError(f"Could not retrieve source code for class {cls.__name__}: {e}")
+            raise TypeError(
+                f"Could not retrieve source code for class {cls.__name__}: {e}"
+            )
         except Exception as e:
-            raise RuntimeError(f"Unexpected error while retrieving source code for class {cls.__name__}: {e}")
+            raise RuntimeError(
+                "Unexpected error while retrieving source code "
+                f"for class {cls.__name__}: {e}"
+            )
 
         return textwrap.dedent(code).strip()
 
@@ -56,19 +64,28 @@ class ClassAstHolder[CLS]:
         try:
             return ast.parse(code)
         except SyntaxError as e:
-            raise SyntaxError(f"Syntax error in class code: {e.msg} at line {e.lineno}, column {e.offset}")
+            raise SyntaxError(
+                f"Syntax error in class code: {e.msg} "
+                f"at line {e.lineno}, column {e.offset}"
+            )
         except Exception as e:
-            raise RuntimeError(f"Unexpected error while parsing class code: {e}")
+            raise RuntimeError(
+                f"Unexpected error while parsing class code: {e}"
+            )
 
     def _get_classdef_from_tree(self, tree: ast.Module) -> ast.ClassDef:
 
         try:
             target = next(iter(tree.body))
         except StopIteration:
-            raise RuntimeError("No class definition found in the provided code.")
+            raise RuntimeError(
+                "No class definition found in the provided code."
+            )
 
         if not isinstance(target, ast.ClassDef):
-            raise TypeError("The provided code does not contain a class definition.")
+            raise TypeError(
+                "The provided code does not contain a class definition."
+            )
 
         return target
 
@@ -78,21 +95,27 @@ class ClassAstHolder[CLS]:
         tree = self._get_ast_tree(code)
         self.classdef = self._get_classdef_from_tree(tree)
 
-
     def _get_classdef_name(self, node: ast.AST) -> str | None:
         if isinstance(node, ast.ClassDef):
             return node.name
         return None
- 
+
     def _get_annassign_target_name(self, node: ast.AST) -> str | None:
 
-        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+        if (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+        ):
             return node.target.id
         return None
 
     def _get_assign_target_name(self, node: ast.AST) -> str | None:
 
-        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+        ):
             return node.targets[0].id
         return None
 
@@ -104,7 +127,11 @@ class ClassAstHolder[CLS]:
 
     def _get_str_constant_expr(self, node: ast.AST) -> str | None:
 
-        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+        if (
+            isinstance(node, ast.Expr)
+            and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str)
+        ):
             return node.value.value
         return None
 

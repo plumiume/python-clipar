@@ -8,12 +8,12 @@ argparse.HelpFormatter の内部メソッドとAPI構造を理解するための
 from __future__ import annotations
 from typing import Any, Callable, Iterable, Pattern
 from argparse import Action
-from argparse import _MutuallyExclusiveGroup # type: ignore
+from argparse import _MutuallyExclusiveGroup  # type: ignore
 
 
 class HelpFormatter:
     """ヘルプメッセージとusageメッセージの生成を行うフォーマッター
-    
+
     このクラス名のみがパブリックAPIとして扱われ、
     提供されるメソッドはすべて実装詳細として扱われる。
     """
@@ -37,7 +37,7 @@ class HelpFormatter:
                  max_help_position: int = 24,
                  width: int | None = None) -> None:
         """HelpFormatterを初期化
-        
+
         Args:
             prog: プログラム名
             indent_increment: インデントの増分（デフォルト: 2）
@@ -49,7 +49,7 @@ class HelpFormatter:
     # ===============================
     # セクションとインデントのメソッド
     # ===============================
-    
+
     def _indent(self) -> None:
         """現在のインデントレベルを1段階深くする"""
         ...
@@ -60,15 +60,20 @@ class HelpFormatter:
 
     class _Section:
         """ヘルプメッセージの1つのセクションを表す内部クラス"""
-        
+
         formatter: HelpFormatter
         parent: HelpFormatter._Section | None
         heading: str | None
         items: list[tuple[Callable[..., str], Iterable[Any]]]
-        
-        def __init__(self, formatter: HelpFormatter, parent: HelpFormatter._Section | None, heading: str | None = None) -> None:
+
+        def __init__(
+            self,
+            formatter: HelpFormatter,
+            parent: HelpFormatter._Section | None,
+            heading: str | None = None
+        ) -> None:
             """セクションを初期化
-            
+
             Args:
                 formatter: 親となるHelpFormatterインスタンス
                 parent: 親セクション（Noneの場合はルートセクション）
@@ -87,7 +92,7 @@ class HelpFormatter:
     # ========================
     # メッセージ構築メソッド
     # ========================
-    
+
     def start_section(self, heading: str | None) -> None:
         """新しいセクションを開始"""
         ...
@@ -100,7 +105,12 @@ class HelpFormatter:
         """セクションにテキストを追加"""
         ...
 
-    def add_usage(self, usage: str | None, actions: Iterable[Action], groups: Iterable[_MutuallyExclusiveGroup], prefix: str | None = None) -> None:
+    def add_usage(
+        self, usage: str | None,
+        actions: Iterable[Action],
+        groups: Iterable[_MutuallyExclusiveGroup],
+        prefix: str | None = None
+    ) -> None:
         """usageセクションを追加"""
         ...
 
@@ -115,7 +125,7 @@ class HelpFormatter:
     # =======================
     # ヘルプフォーマットメソッド
     # =======================
-    
+
     def format_help(self) -> str:
         """完全なヘルプメッセージを生成して返す"""
         ...
@@ -124,11 +134,21 @@ class HelpFormatter:
         """文字列の部分を結合（空文字列とSUPPRESSは除外）"""
         ...
 
-    def _format_usage(self, usage: str | None, actions: Iterable[Action], groups: Iterable[_MutuallyExclusiveGroup], prefix: str | None) -> str:
+    def _format_usage(
+        self,
+        usage: str | None,
+        actions: Iterable[Action],
+        groups: Iterable[_MutuallyExclusiveGroup],
+        prefix: str | None
+    ) -> str:
         """usageメッセージをフォーマット"""
         ...
 
-    def _format_actions_usage(self, actions: Iterable[Action], groups: Iterable[_MutuallyExclusiveGroup]) -> str:
+    def _format_actions_usage(
+        self,
+        actions: Iterable[Action],
+        groups: Iterable[_MutuallyExclusiveGroup]
+    ) -> str:
         """アクションのusage部分をフォーマット"""
         ...
 
@@ -138,22 +158,26 @@ class HelpFormatter:
 
     def _format_action(self, action: Action) -> str:
         """単一のアクション（引数）のヘルプをフォーマット
-        
+
         これは CliparHelpFormatter で最も重要にオーバーライドするメソッド
         """
         ...
 
     def _format_action_invocation(self, action: Action) -> str:
         """アクションの呼び出し形式（名前とmetavar）をフォーマット
-        
+
         これは CliparHelpFormatter で重要にオーバーライドするメソッド
         positional と optional で処理が分かれる
         """
         ...
 
-    def _metavar_formatter(self, action: Action, default_metavar: str) -> Callable[[int], tuple[str, ...]]:
+    def _metavar_formatter(
+        self,
+        action: Action,
+        default_metavar: str
+    ) -> Callable[[int], tuple[str, ...]]:
         """metavar（引数の値を表すプレースホルダー）のフォーマッターを返す
-        
+
         これは CliparHelpFormatter で最も重要にオーバーライドするメソッド
         ここで型情報やリテラル情報の表示を制御する
         """
@@ -196,10 +220,10 @@ class HelpFormatter:
 
 class RawDescriptionHelpFormatter(HelpFormatter):
     """説明文のフォーマットを保持するヘルプフォーマッター"""
-    
+
     def _fill_text(self, text: str, width: int, indent: str) -> str:
         """テキストを指定された幅とインデントで埋める（オーバーライド）
-        
+
         呼び出し元の内部API:
         - _format_text() -> _fill_text()
         - _format_action() -> _expand_help() -> _fill_text()（間接的）
@@ -209,10 +233,10 @@ class RawDescriptionHelpFormatter(HelpFormatter):
 
 class RawTextHelpFormatter(RawDescriptionHelpFormatter):
     """すべてのヘルプテキストのフォーマットを保持するヘルプフォーマッター"""
-    
+
     def _split_lines(self, text: str, width: int) -> list[str]:
         """指定された幅でテキストを行に分割（オーバーライド）
-        
+
         呼び出し元の内部API:
         - _format_action() -> _expand_help() -> _split_lines()
         - _fill_text() -> textwrap.wrap() の代替として使用
@@ -222,32 +246,32 @@ class RawTextHelpFormatter(RawDescriptionHelpFormatter):
 
 class ArgumentDefaultsHelpFormatter(HelpFormatter):
     """引数のデフォルト値をヘルプに追加するヘルプフォーマッター"""
-    
+
     def _get_help_string(self, action: Any) -> str | None:
         """アクションのヘルプ文字列を取得（オーバーライド）
-        
+
         呼び出し元の内部API:
         - _format_action() -> _expand_help() -> _get_help_string()
         - add_argument() -> _format_action() -> _expand_help() -> _get_help_string()
-        """
+        """  # noqa E501
         ...
 
 
 class MetavarTypeHelpFormatter(HelpFormatter):
     """引数の'type'をデフォルトのmetavar値として使用するヘルプフォーマッター"""
-    
+
     def _get_default_metavar_for_optional(self, action: Any) -> str:
         """オプション引数のデフォルトmetavarを取得（オーバーライド）
-        
+
         呼び出し元の内部API:
         - _format_action_invocation() -> _format_args() -> _metavar_formatter() -> _get_default_metavar_for_optional()
-        """
+        """  # noqa E501
         ...
 
     def _get_default_metavar_for_positional(self, action: Any) -> str:
         """位置引数のデフォルトmetavarを取得（オーバーライド）
-        
+
         呼び出し元の内部API:
         - _format_action_invocation() -> _metavar_formatter() -> _get_default_metavar_for_positional()
-        """
+        """  # noqa E501
         ...
