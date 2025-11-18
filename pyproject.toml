@@ -23,8 +23,8 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "argcomplete>=3.6.2",
-    "typing-extensions>=4.14.1",
+    "argcomplete>=3.0.0",
+    "typing-extensions>=4.0.0",
 ]
 
 [project.urls]
