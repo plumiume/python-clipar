@@ -15,6 +15,11 @@ from clipar.v312.basewrapper import (
 from clipar.v312.mixin import _mixin_attrs # pyright: ignore[reportPrivateUsage]
 from types import UnionType
 
+# Module-level type alias definitions for testing (Python 3.12+)
+type UserId = int
+type CustomStr = str
+type Username = str
+
 
 class TestUtilityFunctions:
     """Test utility functions"""
@@ -280,6 +285,63 @@ class TestBaseWrapper:
             result = wrapper._flatten_union_and_literal((str, int, literal_type))
             assert str in result
             assert int in result
+    
+    def test_parse_annotation_type_alias_type(self):
+        """Test _parse_annotation with type alias (Python 3.12+)"""
+        
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            
+            # Test parsing type alias
+            result = wrapper._parse_annotation(UserId)
+            assert 'type' in result
+            # The type should be a callable that converts to int
+            assert callable(result['type'])
+            # Test that it converts values correctly
+            assert result['type']("42") == 42
+    
+    def test_determine_nargs_and_generic_args_with_type_alias_type(self):
+        """Test _determine_nargs_and_generic_args with type alias"""
+        
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            
+            # Test determine_nargs_and_generic_args
+            # Type alias is unwrapped to its underlying type (str in this case)
+            nargs, args = wrapper._determine_nargs_and_generic_args(CustomStr)
+            assert nargs is None
+            assert args == (str,)  # CustomStr is unwrapped to str
+    
+    def test_flatten_union_and_literal_with_type_alias_type(self):
+        """Test _flatten_union_and_literal with resolved type from type alias"""
+        
+        class ConcreteWrapper[NS](BaseWrapper[NS]):
+            def configure_container(self):
+                return Mock(spec=ArgumentContainerProtocol)
+        
+        with patch('clipar.v312.basewrapper.ClassAstHolder') as mock_ast:
+            mock_ast.return_value.get_assign_infos.return_value = {}
+            
+            wrapper = ConcreteWrapper(MockNamespace)
+            
+            # _flatten_union_and_literal receives resolved types, not TypeAliasType directly
+            # The TypeAliasType should be resolved before calling this method
+            resolved_type = wrapper._resolve_type_alias_type(Username)
+            result = wrapper._flatten_union_and_literal((str, resolved_type))
+            # Type alias should be resolved to str
+            assert str in result
     
     def test_bind(self):
         """Test _bind method"""

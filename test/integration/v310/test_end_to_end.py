@@ -7,6 +7,16 @@ from typing import Literal
 from clipar import namespace, group, mutually_exclusive_group, NotSelected
 from clipar import mixin
 
+if sys.version_info >= (3, 12):
+    from typing import TypeAliasType, Union
+else:
+    from typing_extensions import TypeAliasType, Union
+
+UserId = TypeAliasType("UserId", int)
+Username = TypeAliasType("Username", str)
+Port = TypeAliasType("Port", int)
+StringOrUserId = TypeAliasType("StringOrUserId", Union[str, int])
+
 
 class TestBasicNamespace:
     """Basic namespace functionality integration tests"""
@@ -1461,3 +1471,101 @@ class TestFieldAliasingAndConflicts:
                 inner_group_ref = inner_group
                 inner_group_alias = inner_group  # This causes conflict
 
+
+class TestTypeAliasTypeSupport:
+    """Test TypeAliasType support via typing_extensions"""
+
+    def test_type_alias_with_positional_argument(self):
+        """Test TypeAliasType with positional argument"""
+        try:
+            @namespace
+            class Config:
+                user_id: UserId
+            
+            config = Config.parse_args(["123"])
+            assert config.user_id == 123
+            assert isinstance(config.user_id, int)
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
+
+    def test_type_alias_with_optional_argument(self):
+        """Test TypeAliasType with optional argument"""
+        try:
+            @namespace
+            class Config:
+                username: Username = "guest"
+            
+            config1 = Config.parse_args([])
+            assert config1.username == "guest"
+            
+            config2 = Config.parse_args(["--username", "admin"])
+            assert config2.username == "admin"
+            assert isinstance(config2.username, str)
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
+
+    def test_type_alias_in_group(self):
+        """Test TypeAliasType in group"""
+        try:            
+            @group
+            class DatabaseGroup:
+                db_port: Port = 5432
+                db_user: Username = "admin"
+            
+            @namespace
+            class AppConfig:
+                app_name: str
+                database = DatabaseGroup
+            
+            config = AppConfig.parse_args([
+                "MyApp",
+                "--db-port", "3306",
+                "--db-user", "root"
+            ])
+            assert config.app_name == "MyApp"
+            assert config.database.db_port == 3306
+            assert config.database.db_user == "root"
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
+
+    def test_type_alias_with_union(self):
+        """Test TypeAliasType with Union type"""
+        try:            
+            @namespace
+            class Config:
+                identifier: StringOrUserId
+            
+            config1 = Config.parse_args(["user123"])
+            assert config1.identifier == "user123"
+            
+            config2 = Config.parse_args(["42"])
+            # String argument gets parsed as string
+            assert config2.identifier == "42"
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
+
+    def test_type_alias_in_nested_namespace(self):
+        """Test TypeAliasType in nested namespace"""
+        try:
+            @namespace
+            class ConnectionConfig:
+                port: Port = 8080
+                timeout: int = 30
+            
+            @namespace
+            class ServiceConfig:
+                service_id: UserId
+                connection = ConnectionConfig
+            
+            config = ServiceConfig.parse_args([
+                "42",
+                "connection",
+                "--port", "9000",
+                "--timeout", "60"
+            ])
+            assert config.service_id == 42
+            assert config.connection is not NotSelected
+            assert config.connection.port == 9000
+            assert config.connection.timeout == 60
+        except ImportError:
+            pytest.skip("typing_extensions.TypeAliasType not available")
